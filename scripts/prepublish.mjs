@@ -6,8 +6,6 @@
 
 import fs from 'fs';
 import path from 'path';
-
-import crossFetch from 'cross-fetch';
 import yauzl from 'yauzl';
 import {fileURLToPath} from 'url';
 
@@ -76,15 +74,17 @@ const extractFirstMatchingFile = (filter, relativeDestDir, zipBuffer) => new Pro
     }
 });
 
-const downloadMicrobitHex = async () => {
-    const url = 'https://downloads.scratch.mit.edu/microbit/scratch-microbit.hex.zip';
-    console.info(`Downloading ${url}`);
-    const response = await crossFetch(url);
-    const zipBuffer = Buffer.from(await response.arrayBuffer());
+/**
+ * Instead of downloading, load the zip file from local disk.
+ */
+const loadLocalMicrobitHex = async () => {
+    const localZipPath = path.join(basePath, 'scratch-microbit.hex.zip'); // <--- 修改此处为你的zip实际路径
+    console.info(`Reading local zip: ${localZipPath}`);
+    const zipBuffer = fs.readFileSync(localZipPath);
     const relativeHexDir = path.join('static', 'microbit');
     const hexFileName = await extractFirstMatchingFile(
         entry => /\.hex$/.test(entry.fileName),
-        path.join('static', 'microbit'),
+        relativeHexDir,
         zipBuffer
     );
     const relativeHexFile = path.join(relativeHexDir, hexFileName);
@@ -111,7 +111,7 @@ const downloadMicrobitHex = async () => {
 };
 
 const prepublish = async () => {
-    await downloadMicrobitHex();
+    await loadLocalMicrobitHex();
 };
 
 prepublish().then(
