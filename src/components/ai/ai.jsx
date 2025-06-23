@@ -8,8 +8,8 @@ import styles from './ai.css';
 const AiComponent = function (props) {
     const [isBusy, setIsBusy] = useState(false); // 整个周期锁
 
-    const helpUrl = 'http://120.244.105.119:8888/help';
-    const audioUrl = 'http://120.244.105.119:8888/audio';
+    const helpUrl = 'http://api.xiaomalong.org:3001/help';
+    const audioUrl = 'http://api.xiaomalong.org:3001/audio';
 
     const play = async (text, options = {}) => {
         try {
