@@ -136,7 +136,7 @@ const ProjectFetcherHOC = function (WrappedComponent) {
     };
     ProjectFetcherComponent.defaultProps = {
         assetHost: 'https://assets.scratch.mit.edu',
-        projectHost: 'http://120.244.105.119:8888'
+        projectHost: 'http://api.xiaomalong.org:3001/p'
     };
 
     const mapStateToProps = state => ({

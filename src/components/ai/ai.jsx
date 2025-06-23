@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 
 import AiIcon from './icon--ai.svg';
 import styles from './ai.css';
@@ -10,6 +10,10 @@ const AiComponent = function (props) {
 
     const helpUrl = 'http://api.xiaomalong.org:3001/help';
     const audioUrl = 'http://api.xiaomalong.org:3001/audio';
+    const {
+        vm,
+        ...componentProps
+    } = props;
 
     const play = async (text, options = {}) => {
         try {
@@ -94,10 +98,11 @@ const AiComponent = function (props) {
         }
     };
 
-    const {
-        vm,
-        ...componentProps
-    } = props;
+    useEffect(() => {
+        console.log('只执行一次的函数');
+        //play("你好，我是小助手，很高兴为你服务。");
+    }, []);
+
     return (
         <div
             className={classNames(
@@ -105,7 +110,6 @@ const AiComponent = function (props) {
             )}
             onClick={askAi}
             style={{ opacity: isBusy ? 0.5 : 1 }}
-            {...componentProps}
         >
             <img src={AiIcon} alt="AI" />
         </div>
