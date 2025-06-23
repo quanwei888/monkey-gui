@@ -41,6 +41,7 @@ import codeIcon from './icon--code.svg';
 import costumesIcon from './icon--costumes.svg';
 import soundsIcon from './icon--sounds.svg';
 import DebugModal from '../debug-modal/debug-modal.jsx';
+import AiComponent from "../../components/ai/ai";
 
 const messages = defineMessages({
     addExtension: {
@@ -168,6 +169,7 @@ const GUIComponent = props => {
                 dir={isRtl ? 'rtl' : 'ltr'}
                 {...componentProps}
             >
+
                 {telemetryModalVisible ? (
                     <TelemetryModal
                         isRtl={isRtl}
@@ -313,6 +315,7 @@ const GUIComponent = props => {
                                 </TabList>
                                 <TabPanel className={tabClassNames.tabPanel}>
                                     <Box className={styles.blocksWrapper}>
+                                        <AiComponent vm={vm}/>
                                         <Blocks
                                             key={`${blocksId}/${theme}`}
                                             canUseCloud={canUseCloud}

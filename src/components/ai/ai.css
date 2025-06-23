@@ -1,0 +1,30 @@
+@import "../../css/colors.css";
+
+.ai {
+    position: absolute;
+    bottom: 180px;
+    right: 10px;
+    width: 60px;
+    height: 50px;
+    z-index: 9999;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        border-color 0.3s,
+        box-shadow 0.3s,
+        transform 0.3s;              /* 平滑过渡动画 */
+}
+.ai img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;  /* 让图片铺满且不变形 */
+    box-shadow: 0 4px 16px rgba(33,150,243,0.3); /* 阴影更明显 */
+
+}
+
+.ai:hover {
+    transform: scale(1.06);          /* 稍微放大 */
+    cursor: pointer;                 /* 鼠标变为手型 */
+}
