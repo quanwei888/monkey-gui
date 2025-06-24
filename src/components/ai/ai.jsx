@@ -2,27 +2,44 @@ import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React, {useEffect, useState} from 'react';
 
-import AiIcon from './icon--ai.svg';
+import PlayIcon from './play.svg';
+import PlayingIcon from './playing.svg';
 import styles from './ai.css';
 
 const AiComponent = function (props) {
     const [isBusy, setIsBusy] = useState(false); // 整个周期锁
+    const [audioSource, setAudioSource] = useState(null); // 当前播放的音频源
+    const [isPlaying, setIsPlaying] = useState(false); // 是否正在播放
 
-    const helpUrl = 'http://api.xiaomalong.org:3001/help';
-    const audioUrl = 'http://api.xiaomalong.org:3001/audio';
+    const baseUrl = 'http://api.xiaomalong.org:3001';
     const {
         vm,
         ...componentProps
     } = props;
 
+    // 停止音频播放
+    const stopAudio = () => {
+        if (audioSource) {
+            try {
+                audioSource.stop();
+                audioSource.disconnect();
+            } catch (error) {
+                console.log('音频已经停止或断开连接');
+            }
+            setAudioSource(null);
+            setIsPlaying(false);
+        }
+    };
+
     const play = async (text, options = {}) => {
         try {
+            const audioUrl = `${baseUrl}/audio`;
             const defaultOptions = {
                 channels: 1,
                 sampleRate: 16000,
                 bytesPerSample: 2
             };
-            const audioOptions = { ...defaultOptions, ...options };
+            const audioOptions = {...defaultOptions, ...options};
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
             const response = await fetch(audioUrl, {
@@ -30,7 +47,7 @@ const AiComponent = function (props) {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ text: text })
+                body: JSON.stringify({text: text})
             });
 
             const arrayBuffer = await response.arrayBuffer();
@@ -49,21 +66,31 @@ const AiComponent = function (props) {
             const source = audioContext.createBufferSource();
             source.buffer = audioBuffer;
             source.connect(audioContext.destination);
+
+            // 保存音频源引用并设置播放状态
+            setAudioSource(source);
+            setIsPlaying(true);
+
             source.start(0);
 
             return new Promise(resolve => {
                 source.onended = function () {
+                    setAudioSource(null);
+                    setIsPlaying(false);
                     resolve();
                 };
             });
 
         } catch (error) {
             console.error('播放音频时出错:', error);
+            setIsPlaying(false);
+            setAudioSource(null);
             throw error;
         }
     };
 
     const askAi = async () => {
+        const helpUrl = `${baseUrl}/p/${hashProjectId}/ask_for_help`;
         if (isBusy) return;
         setIsBusy(true);
         try {
@@ -74,8 +101,7 @@ const AiComponent = function (props) {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    json: projectJson,
-                    get_tip: true
+                    json: projectJson
                 })
             });
 
@@ -98,20 +124,41 @@ const AiComponent = function (props) {
         }
     };
 
+    // 处理点击事件
+    const handleClick = () => {
+        if (isPlaying) {
+            // 如果正在播放，则停止播放
+            stopAudio();
+        } else {
+            // 如果没有播放，则开始AI询问
+            askAi();
+        }
+    };
+
     useEffect(() => {
         console.log('只执行一次的函数');
         //play("你好，我是小助手，很高兴为你服务。");
     }, []);
+
+    const hashMatch = window.location.hash.match(/#(\d+)/);
+    if (hashMatch === null) {
+        return (<div></div>);
+    }
+    const hashProjectId = hashMatch[1]
 
     return (
         <div
             className={classNames(
                 styles.ai
             )}
-            onClick={askAi}
-            style={{ opacity: isBusy ? 0.5 : 1 }}
+            onClick={handleClick}
+            style={{
+                opacity: isBusy ? 0.5 : 1,
+                cursor: isPlaying ? 'pointer' : 'pointer',
+            }}
+            title={isPlaying ? '点击停止播放' : '点击询问AI'}
         >
-            <img src={AiIcon} alt="AI" />
+            <img src={isPlaying ? PlayingIcon : PlayIcon} alt="AI"/>
         </div>
     );
 };
