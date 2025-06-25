@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 
 import PlayIcon from './play.svg';
 import PlayingIcon from './playing.svg';
@@ -10,12 +10,21 @@ const AiComponent = function (props) {
     const [isBusy, setIsBusy] = useState(false); // 整个周期锁
     const [audioSource, setAudioSource] = useState(null); // 当前播放的音频源
     const [isPlaying, setIsPlaying] = useState(false); // 是否正在播放
+    const [showModal, setShowModal] = useState(false); // 控制浮层显示
+    const [question, setQuestion] = useState('下一步要怎么办？'); // 用户输入的问题
+    const modalRef = useRef(null); // 浮层引用，用于点击外部关闭
 
     const baseUrl = 'http://api.xiaomalong.org:3001';
     const {
         vm,
         ...componentProps
     } = props;
+
+    // 获取项目ID
+    const getHashProjectId = () => {
+        const hashMatch = window.location.hash.match(/#(\d+)/);
+        return hashMatch ? hashMatch[1] : null;
+    };
 
     // 停止音频播放
     const stopAudio = () => {
@@ -89,10 +98,18 @@ const AiComponent = function (props) {
         }
     };
 
-    const askAi = async () => {
+    const askAi = async (userQuestion) => {
+        const hashProjectId = getHashProjectId();
+        if (!hashProjectId) {
+            console.error('无法获取项目ID');
+            return;
+        }
+
         const helpUrl = `${baseUrl}/p/${hashProjectId}/ask_for_help`;
         if (isBusy) return;
+
         setIsBusy(true);
+
         try {
             const projectJson = props.vm.toJSON();
             const response = await fetch(helpUrl, {
@@ -101,7 +118,8 @@ const AiComponent = function (props) {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    json: projectJson
+                    json: projectJson,
+                    question: userQuestion
                 })
             });
 
@@ -110,17 +128,30 @@ const AiComponent = function (props) {
             }
 
             const data = await response.json();
-            console.log('Success:', data);
-            await play(data.tip);
-        } catch (error) {
+            console.log('AI Response:', data);
+
+            // 确保AI回复内容存在
+            const aiResponse = data.tip || data.response || data.message || '抱歉，我没有收到有效的回复。';
+            console.log('AI Response content:', aiResponse);
+
+            // 播放音频
             try {
-                await play("哎呀，我现在出了点小问题，请稍后再试。");
-            } catch (e2) {
-                // 处理提示音播放失败
+                await play(aiResponse);
+            } catch (audioError) {
+                console.error('音频播放失败:', audioError);
             }
-            console.error('Error:', error);
+
+        } catch (error) {
+            const errorMessage = "哎呀，我现在出了点小问题，请稍后再试。";
+            console.error('AI request error:', error);
+
+            try {
+                await play(errorMessage);
+            } catch (audioError) {
+                console.error('错误提示音播放失败:', audioError);
+            }
         } finally {
-            setIsBusy(false); // 无论如何都解锁
+            setIsBusy(false);
         }
     };
 
@@ -130,36 +161,107 @@ const AiComponent = function (props) {
             // 如果正在播放，则停止播放
             stopAudio();
         } else {
-            // 如果没有播放，则开始AI询问
-            askAi();
+            // 显示浮层让用户输入问题
+            setShowModal(true);
         }
     };
 
-    useEffect(() => {
-        console.log('只执行一次的函数');
-        //play("你好，我是小助手，很高兴为你服务。");
-    }, []);
+    // 处理确认按钮点击
+    const handleConfirm = () => {
+        if (question.trim()) {
+            askAi(question);
+            setQuestion(''); // 清空输入
+            setShowModal(false); // 关闭浮层
+        }
+    };
 
-    const hashMatch = window.location.hash.match(/#(\d+)/);
-    if (hashMatch === null) {
+    // 处理取消按钮点击
+    const handleCancel = () => {
+        setShowModal(false);
+        setQuestion(''); // 清空输入
+    };
+
+    // 处理输入变化
+    const handleInputChange = (e) => {
+        setQuestion(e.target.value);
+    };
+
+    // 处理键盘事件
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleConfirm();
+        } else if (e.key === 'Escape') {
+            handleCancel();
+        }
+    };
+
+    // 检查项目ID是否存在
+    const hashProjectId = getHashProjectId();
+    if (!hashProjectId) {
         return (<div></div>);
     }
-    const hashProjectId = hashMatch[1]
 
     return (
-        <div
-            className={classNames(
-                styles.ai
+        <>
+            <div
+                className={classNames(
+                    styles.ai
+                )}
+                onClick={handleClick}
+                style={{
+                    opacity: isBusy ? 0.5 : 1,
+                    cursor: 'pointer',
+                }}
+                title={isPlaying ? '点击停止播放' : '点击询问AI'}
+            >
+                <img src={isPlaying ? PlayingIcon : PlayIcon} alt="AI"/>
+            </div>
+
+            {/* 简单输入浮层 */}
+            {showModal && (
+                <div className={styles.modalOverlay}>
+                    <div ref={modalRef} className={styles.modal}>
+                        <div className={styles.modalHeader}>
+                            <h3>我是你的 AI 老师</h3>
+                            <button
+                                className={styles.closeButton}
+                                onClick={handleCancel}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className={styles.modalBody}>
+                            <textarea
+                                className={styles.questionInput}
+                                value={question}
+                                onChange={handleInputChange}
+                                onKeyDown={handleKeyDown}
+                                placeholder="请输入你的问题..."
+                                disabled={isBusy}
+                                autoFocus
+                            />
+                            <div className={styles.buttonArea}>
+                                <button
+                                    className={styles.cancelButton}
+                                    onClick={handleCancel}
+                                    disabled={isBusy}
+                                >
+                                    取消
+                                </button>
+                                <button
+                                    className={styles.confirmButton}
+                                    onClick={handleConfirm}
+                                    disabled={!question.trim() || isBusy}
+                                >
+                                    {isBusy ? '处理中...' : '确认'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
-            onClick={handleClick}
-            style={{
-                opacity: isBusy ? 0.5 : 1,
-                cursor: isPlaying ? 'pointer' : 'pointer',
-            }}
-            title={isPlaying ? '点击停止播放' : '点击询问AI'}
-        >
-            <img src={isPlaying ? PlayingIcon : PlayIcon} alt="AI"/>
-        </div>
+        </>
     );
 };
 
