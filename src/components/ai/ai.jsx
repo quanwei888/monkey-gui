@@ -3,16 +3,14 @@ import PropTypes from 'prop-types';
 import React, {useEffect, useState, useRef} from 'react';
 
 import PlayIcon from './play.svg';
-import PlayingIcon from './playing.svg';
 import styles from './ai.css';
 
 const AiComponent = function (props) {
-    const [isBusy, setIsBusy] = useState(false); // 整个周期锁
-    const [audioSource, setAudioSource] = useState(null); // 当前播放的音频源
-    const [isPlaying, setIsPlaying] = useState(false); // 是否正在播放
     const [showModal, setShowModal] = useState(false); // 控制浮层显示
     const [question, setQuestion] = useState('下一步要怎么办？'); // 用户输入的问题
+    const [isLoading, setIsLoading] = useState(false); // 加载状态
     const modalRef = useRef(null); // 浮层引用，用于点击外部关闭
+    const currentAudioSource = useRef(null); // 当前播放的音频源引用
 
     const baseUrl = 'http://api.xiaomalong.org:3001';
     const {
@@ -26,22 +24,23 @@ const AiComponent = function (props) {
         return hashMatch ? hashMatch[1] : null;
     };
 
-    // 停止音频播放
-    const stopAudio = () => {
-        if (audioSource) {
+    // 停止当前播放的音频
+    const stopCurrentAudio = () => {
+        if (currentAudioSource.current) {
             try {
-                audioSource.stop();
-                audioSource.disconnect();
+                currentAudioSource.current.stop();
+                currentAudioSource.current = null;
             } catch (error) {
-                console.log('音频已经停止或断开连接');
+                console.log('停止音频播放:', error);
             }
-            setAudioSource(null);
-            setIsPlaying(false);
         }
     };
 
     const play = async (text, options = {}) => {
         try {
+            // 停止当前播放的音频
+            stopCurrentAudio();
+
             const audioUrl = `${baseUrl}/audio`;
             const defaultOptions = {
                 channels: 1,
@@ -76,24 +75,21 @@ const AiComponent = function (props) {
             source.buffer = audioBuffer;
             source.connect(audioContext.destination);
 
-            // 保存音频源引用并设置播放状态
-            setAudioSource(source);
-            setIsPlaying(true);
+            // 保存当前音频源引用
+            currentAudioSource.current = source;
 
             source.start(0);
 
             return new Promise(resolve => {
                 source.onended = function () {
-                    setAudioSource(null);
-                    setIsPlaying(false);
+                    currentAudioSource.current = null;
                     resolve();
                 };
             });
 
         } catch (error) {
             console.error('播放音频时出错:', error);
-            setIsPlaying(false);
-            setAudioSource(null);
+            currentAudioSource.current = null;
             throw error;
         }
     };
@@ -105,10 +101,10 @@ const AiComponent = function (props) {
             return;
         }
 
-        const helpUrl = `${baseUrl}/p/${hashProjectId}/ask_for_help`;
-        if (isBusy) return;
+        // 设置加载状态
+        setIsLoading(true);
 
-        setIsBusy(true);
+        const helpUrl = `${baseUrl}/p/${hashProjectId}/ask_for_help`;
 
         try {
             const projectJson = props.vm.toJSON();
@@ -151,24 +147,20 @@ const AiComponent = function (props) {
                 console.error('错误提示音播放失败:', audioError);
             }
         } finally {
-            setIsBusy(false);
+            // 无论成功还是失败，都要清除加载状态
+            setIsLoading(false);
         }
     };
 
     // 处理点击事件
     const handleClick = () => {
-        if (isPlaying) {
-            // 如果正在播放，则停止播放
-            stopAudio();
-        } else {
-            // 显示浮层让用户输入问题
-            setShowModal(true);
-        }
+        // 显示浮层让用户输入问题
+        setShowModal(true);
     };
 
     // 处理确认按钮点击
     const handleConfirm = () => {
-        if (question.trim()) {
+        if (question.trim() && !isLoading) {
             askAi(question);
             setQuestion(''); // 清空输入
             setShowModal(false); // 关闭浮层
@@ -179,6 +171,8 @@ const AiComponent = function (props) {
     const handleCancel = () => {
         setShowModal(false);
         setQuestion(''); // 清空输入
+        // 停止当前播放的音频
+        stopCurrentAudio();
     };
 
     // 处理输入变化
@@ -206,16 +200,17 @@ const AiComponent = function (props) {
         <>
             <div
                 className={classNames(
-                    styles.ai
+                    styles.ai,
+                    { [styles.loading]: isLoading }
                 )}
                 onClick={handleClick}
                 style={{
-                    opacity: isBusy ? 0.5 : 1,
-                    cursor: 'pointer',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
                 }}
-                title={isPlaying ? '点击停止播放' : '点击询问AI'}
+                title={isLoading ? "AI正在思考中..." : "点击询问AI"}
             >
-                <img src={isPlaying ? PlayingIcon : PlayIcon} alt="AI"/>
+                <img src={PlayIcon} alt="AI"/>
+                {isLoading && <div className={styles.loadingSpinner}></div>}
             </div>
 
             {/* 简单输入浮层 */}
@@ -227,6 +222,7 @@ const AiComponent = function (props) {
                             <button
                                 className={styles.closeButton}
                                 onClick={handleCancel}
+                                disabled={isLoading}
                             >
                                 ×
                             </button>
@@ -238,23 +234,30 @@ const AiComponent = function (props) {
                                 onChange={handleInputChange}
                                 onKeyDown={handleKeyDown}
                                 placeholder="请输入你的问题..."
-                                disabled={isBusy}
                                 autoFocus
+                                disabled={isLoading}
                             />
                             <div className={styles.buttonArea}>
                                 <button
                                     className={styles.cancelButton}
                                     onClick={handleCancel}
-                                    disabled={isBusy}
+                                    disabled={isLoading}
                                 >
                                     取消
                                 </button>
                                 <button
                                     className={styles.confirmButton}
                                     onClick={handleConfirm}
-                                    disabled={!question.trim() || isBusy}
+                                    disabled={!question.trim() || isLoading}
                                 >
-                                    {isBusy ? '处理中...' : '确认'}
+                                    {isLoading ? (
+                                        <>
+                                            <span className={styles.buttonSpinner}></span>
+                                            思考中...
+                                        </>
+                                    ) : (
+                                        '确认'
+                                    )}
                                 </button>
                             </div>
                         </div>

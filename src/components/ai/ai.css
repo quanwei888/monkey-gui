@@ -15,7 +15,7 @@
         border-color 0.3s,
         box-shadow 0.3s,
         transform 0.3s;              /* 平滑过渡动画 */
-    animation: ai-pulse 1.5s infinite alternate ease-in-out;
+    animation: ai-pulse 1.2s infinite alternate ease-in-out;
 }
 
 @keyframes ai-pulse {
@@ -23,7 +23,7 @@
         transform: scale(1);
     }
     100% {
-        transform: scale(1.6);
+        transform: scale(1.2);
     }
 }
 
@@ -38,6 +38,46 @@
     transform: scale(1.06);          /* 稍微放大 */
     cursor: pointer;                 /* 鼠标变为手型 */
     animation-play-state: paused;     /* 悬停时暂停动画 */
+}
+
+/* Loading状态样式 */
+.ai.loading {
+    animation: ai-loading 1.5s infinite linear;
+    opacity: 0.8;
+}
+
+.ai.loading:hover {
+    transform: scale(1);
+    cursor: not-allowed;
+}
+
+@keyframes ai-loading {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Loading spinner for AI icon */
+.loadingSpinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid #1677ff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 2;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 /* 简单浮层样式 */
@@ -96,8 +136,13 @@
     transition: background-color 0.2s;
 }
 
-.closeButton:hover {
+.closeButton:hover:not(:disabled) {
     background-color: #e0e0e0;
+}
+
+.closeButton:disabled {
+    color: #ccc;
+    cursor: not-allowed;
 }
 
 .modalBody {
@@ -123,13 +168,14 @@
     line-height: 1.4;
 }
 
-.questionInput:focus {
+.questionInput:focus:not(:disabled) {
     border-color: #1677ff;
     box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
 }
 
 .questionInput:disabled {
     background-color: #f5f5f5;
+    color: #999;
     cursor: not-allowed;
 }
 
@@ -157,7 +203,8 @@
 }
 
 .cancelButton:disabled {
-    opacity: 0.5;
+    background-color: #f0f0f0;
+    color: #ccc;
     cursor: not-allowed;
 }
 
@@ -172,6 +219,10 @@
     font-weight: 500;
     transition: all 0.2s;
     min-width: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .confirmButton:hover:not(:disabled) {
@@ -181,4 +232,14 @@
 .confirmButton:disabled {
     background-color: #ccc;
     cursor: not-allowed;
+}
+
+/* Button loading spinner */
+.buttonSpinner {
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    border-top: 1.5px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
 }
