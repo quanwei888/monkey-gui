@@ -4,6 +4,7 @@ import React, {useEffect, useState, useRef} from 'react';
 
 import PlayIcon from './play.svg';
 import styles from './ai.css';
+import MouseRPA from './rpa';
 
 const AiComponent = function (props) {
     const [showModal, setShowModal] = useState(false); // 控制浮层显示
@@ -152,6 +153,12 @@ const AiComponent = function (props) {
         }
     };
 
+    const handleRpa = async () => {
+        const mouse = new MouseRPA();
+        console.log('开始执行RPA操作');
+        await mouse.clickElementByAttribute("data-id", "motion_movesteps");
+    }
+
     // 处理点击事件
     const handleClick = () => {
         // 显示浮层让用户输入问题
@@ -203,13 +210,10 @@ const AiComponent = function (props) {
                     styles.ai,
                     { [styles.loading]: isLoading }
                 )}
-                onClick={handleClick}
-                style={{
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                }}
                 title={isLoading ? "AI正在思考中..." : "点击询问AI"}
             >
-                <img src={PlayIcon} alt="AI"/>
+                <button onClick={handleRpa} disabled={isLoading}>AA</button>
+                <img src={PlayIcon} alt="AI" />
                 {isLoading && <div className={styles.loadingSpinner}></div>}
             </div>
 
