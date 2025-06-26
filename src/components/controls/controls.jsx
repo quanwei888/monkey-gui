@@ -8,6 +8,7 @@ import StopAll from '../stop-all/stop-all.jsx';
 import TurboMode from '../turbo-mode/turbo-mode.jsx';
 
 import styles from './controls.css';
+import AiTestComponent from "../ai/test";
 
 const messages = defineMessages({
     goTitle: {
@@ -37,6 +38,7 @@ const Controls = function (props) {
             className={classNames(styles.controlsContainer, className)}
             {...componentProps}
         >
+            <AiTestComponent vm={props.vm}/>
             <GreenFlag
                 active={active}
                 title={intl.formatMessage(messages.goTitle)}

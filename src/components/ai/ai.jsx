@@ -1,10 +1,9 @@
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 import React, {useEffect, useState, useRef} from 'react';
-
 import PlayIcon from './play.svg';
 import styles from './ai.css';
-import MouseRPA from './rpa';
+import Rpa from './rpa';
 
 const AiComponent = function (props) {
     const [showModal, setShowModal] = useState(false); // 控制浮层显示
@@ -154,9 +153,12 @@ const AiComponent = function (props) {
     };
 
     const handleRpa = async () => {
-        const mouse = new MouseRPA();
-        console.log('开始执行RPA操作');
-        await mouse.clickElementByAttribute("data-id", "motion_movesteps");
+        await Rpa.click('[data-id="motion_movesteps"]');
+        const canvasDom = document.querySelector('.blocklyWorkspace');
+        const block_Dom =  Rpa.findElementByDataId("change_num");
+        await Rpa.centerBlock(canvasDom,block_Dom);
+        //await Rpa.drag('[data-id="motion_movesteps"]', 500, 200);
+
     }
 
     // 处理点击事件
@@ -208,12 +210,12 @@ const AiComponent = function (props) {
             <div
                 className={classNames(
                     styles.ai,
-                    { [styles.loading]: isLoading }
+                    {[styles.loading]: isLoading}
                 )}
                 title={isLoading ? "AI正在思考中..." : "点击询问AI"}
             >
                 <button onClick={handleRpa} disabled={isLoading}>AA</button>
-                <img src={PlayIcon} alt="AI" />
+                <img src={PlayIcon} alt="AI"/>
                 {isLoading && <div className={styles.loadingSpinner}></div>}
             </div>
 
