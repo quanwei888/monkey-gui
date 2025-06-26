@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
  */
 class Rpa {
     constructor() {
-        this.user = userEvent.setup();
+        this.user = userEvent.setup({ delay: null });
         this._unblockFn = null;
     }
 
@@ -254,19 +254,9 @@ class Rpa {
             });
 
             // 第一步：先拖动一点
-            await this.smoothDrag(startX, startY, startX + 30, startY - 30, 5);
-
-            //修改 data-id
-            var oldId = null;
-            if (newId != null) {
-                const domDragging = document.querySelector(".blocklyDragging");
-                oldId = domDragging.getAttribute("data-id");
-                //domDragging.setAttribute("data-id", newId);
-            }
-
-            await this.smoothDrag(startX + 30, startY - 30, 300, startY - 30, 5);
-            await this.smoothDrag(300, startY - 30, 300, endY, 10);
-            await this.smoothDrag(300, endY, endX, endY, 10);
+            await this.smoothDrag(startX , startY, 300, startY, 2);
+            await this.smoothDrag(300, startY, 300, endY, 5);
+            await this.smoothDrag(300, endY, endX, endY, 5);
 
             // 鼠标释放
             await this.user.pointer('[/MouseLeft]');
@@ -274,7 +264,7 @@ class Rpa {
             console.log(`拖动完成: 到达目标位置 (${endX}, ${endY})`);
 
             this.unblock(); // 操作完成后解除阻止
-            return oldId;
+            return true;
         } catch (error) {
             console.error('拖动操作失败:', error);
             this.unblock(); // 发生错误时也要解除阻止

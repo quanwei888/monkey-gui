@@ -1,0 +1,117 @@
+import Rpa from "../rpa";
+import Command from "./base";
+
+/**
+ * 块命令基类
+ */
+class BlockCommand extends Command {
+    id = null;
+    dataId = null;
+
+    constructor(vm) {
+        super(vm);
+    }
+
+    validateParams() {
+        super.validateParams();
+        if (!this.id) {
+            throw new Error('Block ID is required');
+        }
+    }
+
+    /**
+     * 计算块的放置位置，子类需重写
+     */
+    calcPosition() {
+        throw new Error("calcPosition method not implemented");
+    }
+
+    /**
+     * 执行块的拖拽操作
+     */
+    async execute() {
+        if (this.blockExists(this.id)) {
+            return;
+        }
+
+        const blockEl = this.getScriptEl(this.dataId);
+        const opcode = blockEl.getAttribute("data-id");
+        window.opcodeToId = { [opcode]: this.id };
+
+        let pos = this.calcPosition();
+        if (await this.ensureVisible(pos[0], pos[1])) {
+            pos = this.calcPosition();
+        }
+
+        await Rpa.drag(blockEl, pos[0], pos[1], this.dataId);
+        window.opcodeToId = {};
+
+        // 执行后检查
+        if (!this.blockExists(this.id)) {
+            console.log(`Block creation failed for ID: "${this.id}"`);
+        }
+    }
+}
+
+/**
+ * 添加新块命令
+ */
+export class AddBlockCommand extends BlockCommand {
+    /**
+     * 计算新块的放置位置
+     */
+    calcPosition() {
+        const scriptIds = this.vm.editingTarget.blocks.getScripts();
+        if (scriptIds.length === 0) {
+            return [400, 200];
+        }
+
+        let minX = Infinity;
+        let maxY = 200;
+
+        for (const scriptId of scriptIds) {
+            const block = this.vm.editingTarget.blocks.getBlock(scriptId);
+            if (block.shadow) continue;
+
+            const blockEl = this.getScriptEl(block.id);
+            const coords = this.getElementCoords(blockEl);
+
+            if (coords[0] < minX) {
+                minX = coords[0];
+            }
+
+            const bottomY = coords[1] + coords[3];
+            if (bottomY > maxY) {
+                maxY = bottomY;
+            }
+        }
+        return [minX, maxY + 50];
+    }
+}
+
+/**
+ * 连接块命令
+ */
+export class ConnectBlockCommand extends BlockCommand {
+    parentId = "";
+
+    constructor(vm) {
+        super(vm);
+    }
+
+    validateParams() {
+        super.validateParams();
+        if (!this.parentId) {
+            throw new Error('Parent block ID is required');
+        }
+    }
+
+    /**
+     * 计算连接块的位置（在父块下方）
+     */
+    calcPosition() {
+        const parentEl = this.getBlockEl(this.parentId);
+        const coords = this.getElementCoords(parentEl);
+        return [coords[0], coords[1] + coords[3]];
+    }
+}

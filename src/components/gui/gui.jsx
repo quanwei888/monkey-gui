@@ -315,7 +315,6 @@ const GUIComponent = props => {
                                 </TabList>
                                 <TabPanel className={tabClassNames.tabPanel}>
                                     <Box className={styles.blocksWrapper}>
-                                        <AiComponent vm={vm}/>
                                         <Blocks
                                             key={`${blocksId}/${theme}`}
                                             canUseCloud={canUseCloud}

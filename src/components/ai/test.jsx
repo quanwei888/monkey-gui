@@ -2,21 +2,18 @@ import React, {useEffect, useState, useRef} from 'react';
 import {
     AddBlockCommand,
     ConnectBlockCommand,
-    InputBlockCommand,
+    BlockInputCommand,
     TextInputCommand,
-    ParamType,
-    OptionInputCommand, SelectCategoryCommand, SelectTargetCommand
+    OptionInputCommand, SelectCategoryCommand, SelectTargetCommand, VariableInputCommand
 } from './command';
-import Rpa from "./rpa";
 
 const AiTestComponent = function (props) {
     const {
         vm,
         ...componentProps
     } = props;
-    console.log(vm);
-    const generateUUID = ()=> {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const generateUUID = () => {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             const r = Math.random() * 16 | 0;
             const v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
@@ -30,27 +27,26 @@ const AiTestComponent = function (props) {
         cmd = new SelectTargetCommand(vm, "Cat");
         await cmd.exec();
 
-        const dataId = 'motion_movesteps';
-        cmd = new AddBlockCommand(vm, dataId)
-        cmd.newId = "12345_" + generateUUID();
+        cmd = new AddBlockCommand(vm, generateUUID())
+        cmd.dataId = 'motion_movesteps';
         await cmd.exec();
     };
     const handleConnectBlock = async () => {
         const dataId = 'motion_movesteps';
         const parentId = "set_sum_0";
-        const cmd = new ConnectBlockCommand(vm, dataId, parentId)
+        const cmd = new ConnectBlockCommand(vm, generateUUID(), parentId)
+        cmd.dataId = 'motion_movesteps';
         await cmd.exec();
     };
     const handleInputBlock = async () => {
-        const dataId = '$_xposition';
         const parentId = "set_sum_0";
-        const cmd = new InputBlockCommand(
+        const cmd = new BlockInputCommand(
             vm,
-            dataId,
+            generateUUID(),
             parentId,
-            ParamType.TextInput,
             0
         )
+        cmd.dataId = '$_xposition';
         await cmd.exec();
     };
     const handleTextInputBlock = async () => {
@@ -58,7 +54,6 @@ const AiTestComponent = function (props) {
         const cmd = new TextInputCommand(
             vm,
             id,
-            ParamType.TextInput,
             0,
             "10"
         )
@@ -69,14 +64,62 @@ const AiTestComponent = function (props) {
         const cmd = new OptionInputCommand(
             vm,
             id,
-            ParamType.Field,
-            0,
+            1,
             "当前数字"
         )
         await cmd.exec();
     };
+
+    const handleRemote = async () => {
+        const hashMatch = window.location.hash.match(/#(\d+)/);
+        const projectId = hashMatch ? hashMatch[1] : null;
+        // 从 API 获取命令数据
+        const response = await fetch(`http://api.xiaomalong.org:3001/cmd/${projectId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const cmds = await response.json();
+
+        var cmd = null;
+        for (const cmd_json of cmds) {
+            switch (cmd_json.class) {
+                case "AddBlockCommand":
+                    cmd = new AddBlockCommand(vm);
+                    break;
+                case "ConnectBlockCommand":
+                    cmd = new ConnectBlockCommand(vm);
+                    break;
+                case "InputBlockCommand":
+                    cmd = new BlockInputCommand(vm);
+                    break;
+                case "TextInputCommand":
+                    cmd = new TextInputCommand(vm);
+                    break;
+                case "OptionInputCommand":
+                    cmd = new OptionInputCommand(vm);
+                    break;
+                case "SelectCategoryCommand":
+                    cmd = new SelectCategoryCommand(vm);
+                    break;
+                case "SelectTargetCommand":
+                    cmd = new SelectTargetCommand(vm);
+                    break;
+                case "BlockInputCommand":
+                    cmd = new BlockInputCommand(vm);
+                    break;
+                case "VariableInputCommand":
+                    cmd = new VariableInputCommand(vm);
+                    break;
+            }
+            console.log(cmd_json);
+            Object.assign(cmd, cmd_json);
+            await cmd.exec();
+        }
+    };
+
     return (
         <div>
+            <button onClick={handleRemote}>r</button>
             <button onClick={handleAddBlock}>add</button>
             <button onClick={handleConnectBlock}>connect</button>
             <button onClick={handleInputBlock}>input</button>
