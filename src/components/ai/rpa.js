@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
  */
 class Rpa {
     constructor() {
-        this.user = userEvent.setup({ delay: null });
+        this.user = userEvent.setup({delay: 0});
         this._unblockFn = null;
     }
 
@@ -254,7 +254,7 @@ class Rpa {
             });
 
             // 第一步：先拖动一点
-            await this.smoothDrag(startX , startY, 300, startY, 2);
+            await this.smoothDrag(startX, startY, 300, startY, 2);
             await this.smoothDrag(300, startY, 300, endY, 5);
             await this.smoothDrag(300, endY, endX, endY, 5);
 
@@ -279,18 +279,47 @@ class Rpa {
      * @param {string} text - 要输入的文本
      * @returns {Promise<boolean>} - 操作是否成功
      */
-    async type(element, text) {
+    type = async (element, text) => {
         try {
-            this.block(); // 开始操作前阻止用户交互
-            await this.user.click(element);
-            await this.user.keyboard(text);
-            console.log(`文本输入成功: "${text}"`);
+            this.block();
 
-            this.unblock(); // 操作完成后解除阻止
+            // 1. 检查元素状态
+            if (!element || element.disabled || element.readOnly) {
+                throw new Error('元素不可输入');
+            }
+
+            // 2. 确保元素可见
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // 3. 点击并确保焦点
+            await this.user.click(element);
+            if (document.activeElement !== element) {
+                element.focus();
+            }
+
+            // 4. 等待焦点稳定
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // 5. 清空现有内容并输入
+            await this.user.keyboard(text);
+
+            // 6. 验证输入结果
+            if (element.value !== text) {
+                console.warn(`输入值不匹配: 期望"${text}", 实际"${element.value}"`);
+            }
+
+            console.log(`文本输入成功: "${text}"`);
+            this.unblock();
             return true;
         } catch (error) {
-            console.error('文本输入失败:', error);
-            this.unblock(); // 发生错误时也要解除阻止
+            console.error('文本输入失败:', error, {
+                elementType: element?.tagName,
+                elementDisabled: element?.disabled,
+                elementReadOnly: element?.readOnly,
+                elementValue: element?.value
+            });
+            this.unblock();
             return false;
         }
     }
@@ -304,6 +333,76 @@ class Rpa {
         console.log(`等待 ${ms} 毫秒`);
         return new Promise(resolve => setTimeout(resolve, ms));
     }
+
+    async selectCategory(name) {
+        const el = document.querySelector(`[class*="${name}"]`);
+        if (!el) {
+            throw new Error(`Category "${name}" not found`);
+        }
+        await this.click(el);
+        //await this.wait(1000);
+    }
+
+    highlightCategory(name) {
+        const el = document.querySelector(`[class*="${name}"]`);
+        this.highlightElement(el);
+    }
+
+    highlightElement(element) {
+        if (!(element instanceof Element)) return;
+
+        // 移除旧的高亮遮罩（如果存在）
+        const oldMask = document.getElementById('__highlight-mask');
+        if (oldMask) oldMask.remove();
+
+        const rect = element.getBoundingClientRect();
+        const padding = 3;
+
+        const mask = document.createElement('div');
+        mask.id = '__highlight-mask';
+        mask.style.position = 'fixed';
+        mask.style.top = `${rect.top + window.scrollY - padding}px`;
+        mask.style.left = `${rect.left + window.scrollX - padding}px`;
+        mask.style.width = `${rect.width + padding * 2}px`;
+        mask.style.height = `${rect.height + padding * 2}px`;
+        mask.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+        mask.style.border = '4px solid rgba(255, 0, 0, 0.5)';
+        mask.style.pointerEvents = 'none';
+        mask.style.zIndex = '9999';
+        mask.style.boxSizing = 'border-box';
+        mask.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.3)';
+        mask.style.transition = 'opacity 0.3s ease';
+        mask.style.opacity = '0';
+
+        document.body.appendChild(mask);
+
+        // 淡入出现
+        requestAnimationFrame(() => {
+            mask.style.opacity = '1';
+        });
+
+        // 实现闪烁效果：渐隐、渐现，重复几次
+        let flashes = 3;
+        let visible = true;
+        let count = 0;
+
+        const interval = setInterval(() => {
+            visible = !visible;
+            mask.style.opacity = visible ? '1' : '0.2';
+            count++;
+
+            if (count >= flashes * 2) {
+                clearInterval(interval);
+
+                // 最后淡出并移除遮罩
+                mask.style.opacity = '0';
+                setTimeout(() => {
+                    mask.remove();
+                }, 300);
+            }
+        }, 300);
+    }
+
 }
 
 // 创建并导出单例实例

@@ -8,10 +8,6 @@ class BlockCommand extends Command {
     id = null;
     dataId = null;
 
-    constructor(vm) {
-        super(vm);
-    }
-
     validateParams() {
         super.validateParams();
         if (!this.id) {
@@ -29,7 +25,7 @@ class BlockCommand extends Command {
     /**
      * 执行块的拖拽操作
      */
-    async execute() {
+    execute = async () => {
         if (this.blockExists(this.id)) {
             return;
         }
@@ -50,6 +46,10 @@ class BlockCommand extends Command {
         if (!this.blockExists(this.id)) {
             console.log(`Block creation failed for ID: "${this.id}"`);
         }
+    }
+    async suggest() {
+        const blockEl = this.getScriptEl(this.dataId);
+        Rpa.highlightElement(blockEl);
     }
 }
 
@@ -85,6 +85,9 @@ export class AddBlockCommand extends BlockCommand {
                 maxY = bottomY;
             }
         }
+        if (Math.abs(minX - 400) <20) {
+            minX = 400
+        }
         return [minX, maxY + 50];
     }
 }
@@ -94,10 +97,6 @@ export class AddBlockCommand extends BlockCommand {
  */
 export class ConnectBlockCommand extends BlockCommand {
     parentId = "";
-
-    constructor(vm) {
-        super(vm);
-    }
 
     validateParams() {
         super.validateParams();
@@ -113,5 +112,30 @@ export class ConnectBlockCommand extends BlockCommand {
         const parentEl = this.getBlockEl(this.parentId);
         const coords = this.getElementCoords(parentEl);
         return [coords[0], coords[1] + coords[3]];
+    }
+}
+
+
+/**
+ * 选择分类命令
+ */
+export class SelectCategoryCommand extends Command {
+    name = "";
+
+    validateParams() {
+        super.validateParams();
+        if (!this.name) {
+            throw new Error('Category name is required');
+        }
+    }
+
+    /**
+     * 执行分类选择操作
+     */
+    execute = async () => {
+        await Rpa.selectCategory(this.name)
+    }
+    async suggest() {
+        Rpa.highlightCategory(this.name);
     }
 }

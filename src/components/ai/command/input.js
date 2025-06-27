@@ -1,12 +1,12 @@
- import Rpa from "../rpa";
- import Command from "./base";
+import Rpa from "../rpa";
+import Command from "./base";
 
 /**
  * 输入命令基类
  */
 class InputCommand extends Command {
     id = "";
-    paramIndex = 0;
+    paramName = null;
     paramValue = null;
 
     constructor(vm) {
@@ -18,58 +18,52 @@ class InputCommand extends Command {
         if (!this.id) {
             throw new Error('Block ID is required');
         }
-        if (this.paramIndex < 0) {
-            throw new Error('Parameter index must be non-negative');
+        if (this.paramName === null || this.paramName === undefined) {
+            throw new Error('Parameter name is required');
         }
         if (this.paramValue === null || this.paramValue === undefined) {
             throw new Error('Parameter value is required');
         }
     }
 
-    /**
-     * 获取参数的DOM元素
-     */
-    getParamEl(id) {
-        console.log("Getting parameter element for:", id);
-        const parentEl = this.getScriptEl(id);
-        const parentBlockEl = this.getBlockEl(id);
-        const nodes = parentEl.querySelectorAll(':scope > g, :scope > [data-argument-type]');
+    getParamBlock = (blockId, paramName) => {
+        const blocks = this.vm.editingTarget.blocks._blocks;
+        const block = blocks[blockId];
+        if (paramName in block.inputs) {
+            const input = block.inputs[paramName];
+            return this.getScriptEl(input.block);
+        } else if (paramName in block.fields) {
+            const domBlock = this.getScriptEl(blockId);
+            const gElements = domBlock.querySelectorAll(":scope > g");
 
-        const slots = [];
-        nodes.forEach(node => {
-            const argType = node.getAttribute('data-argument-type');
-            if (!argType) {
-                // 根据位置判断是参数还是下一个块
-                const parentBounds = this.getElementCoords(parentBlockEl);
-                const nodeDataId = node.getAttribute('data-id');
-
-                if (!nodeDataId) {
-                    slots.push(node);
-                    return;
+            for (const g of gElements) {
+                const typeAttr = g.getAttribute("data-argument-type");
+                if (["variable", "dropdown", "colour"].includes(typeAttr)) {
+                    return g;
                 }
-
-                const nodeEl = this.getScriptEl(nodeDataId);
-                const nodeBounds = this.getElementCoords(nodeEl);
-
-                if (nodeBounds[1] + nodeBounds[3] > parentBounds[1] + parentBounds[3]) {
-                    // 是下一个块，跳过
-                    return;
-                } else {
-                    slots.push(node);
-                }
-            } else {
-                slots.push(node);
             }
-        });
+        }
 
-        return slots[this.paramIndex];
+        if (paramName === "CONDITION") {
+            const domBlock = this.getScriptEl(blockId);
+            const pElements = domBlock.querySelectorAll(":scope > path");
+
+            for (const p of pElements) {
+                const typeAttr = p.getAttribute("data-argument-type");
+                if (["boolean"].includes(typeAttr)) {
+                    return p;
+                }
+            }
+        }
+
+        throw new Error(`Parameter ${paramName} not found in block ${blockId}`);
     }
 
     /**
      * 计算参数位置
      */
     calcPosition() {
-        const slot = this.getParamEl(this.id);
+        const slot = this.getParamBlock(this.id, this.paramName);
         const coords = this.getElementCoords(slot);
         return [
             coords[0] + coords[2] / 2,
@@ -82,44 +76,26 @@ class InputCommand extends Command {
  * 块输入命令
  */
 export class BlockInputCommand extends InputCommand {
-    dataId = "";
-    parentId = "";
-    inputName = "";
-
-    constructor(vm) {
-        super(vm);
-        this.paramValue = "";
-    }
-
-    validateParams() {
-        super.validateParams();
-        if (!this.parentId) {
-            throw new Error('Parent block ID is required');
-        }
-    }
-
-    getDataId() {
-        return this.dataId;
-    }
+    dataId = null;
 
     /**
      * 计算块输入的位置
      */
-    calcPosition() {
-        if (this.inputName === "SUBSTACK") {
-            const blockEl = this.getBlockEl(this.parentId);
+    calcPosition = () => {
+        if (this.paramName === "SUBSTACK") {
+            const blockEl = this.getBlockEl(this.id);
             const coords = this.getElementCoords(blockEl);
             return [coords[0] + 40, coords[1] + 40];
         }
 
-        if (this.inputName === "SUBSTACK2") {
-            const blockEl = this.getBlockEl(this.parentId);
+        if (this.paramName === "SUBSTACK2") {
+            const blockEl = this.getBlockEl(this.id);
             const coords = this.getElementCoords(blockEl);
             return [coords[0] + 40, coords[1] + coords[3] - 30];
         }
 
-        const slot = this.getParamEl(this.parentId);
-        const coords = getElementCoords(slot);
+        const slot = this.getParamBlock(this.id, this.paramName);
+        const coords = this.getElementCoords(slot);
         return [
             coords[0] + coords[2] / 2,
             coords[1] + coords[3] / 2
@@ -129,27 +105,32 @@ export class BlockInputCommand extends InputCommand {
     /**
      * 执行块输入操作
      */
-    async execute() {
-        if (this.blockExists(this.id)) {
+    execute = async () => {
+        if (this.blockExists(this.paramValue)) {
+            console.log("block exists", this.paramValue);
             return;
         }
-
-        const blockEl = this.getScriptEl(this.getDataId());
-        const opcode = blockEl.getAttribute("data-id");
-        window.opcodeToId = { [opcode]: this.id };
+        const domParamBlock = this.getScriptEl(this.dataId);
+        const opcode = domParamBlock.getAttribute("data-id");
+        window.opcodeToId = {[opcode]: this.paramValue};//参数 block 的 id
 
         let pos = this.calcPosition();
         if (await this.ensureVisible(pos[0], pos[1])) {
             pos = this.calcPosition();
         }
 
-        await Rpa.drag(blockEl, pos[0], pos[1], this.dataId);
+        await Rpa.drag(domParamBlock, pos[0], pos[1], this.dataId);
         window.opcodeToId = {};
 
         // 执行后检查
-        if (!this.blockExists(this.id)) {
-            console.log(`Block input creation failed for ID: "${this.id}"`);
+        if (!this.blockExists(this.paramValue)) {
+            console.log(`Block input creation failed for ID: "${this.paramValue}"`);
         }
+    }
+
+    async suggest() {
+        const blockEl = this.getScriptEl(this.getDataId());
+        Rpa.highlightElement(blockEl);
     }
 }
 
@@ -157,52 +138,23 @@ export class BlockInputCommand extends InputCommand {
  * 变量输入命令
  */
 export class VariableInputCommand extends BlockInputCommand {
-    varName = "";
-    varType = "";
+    paramValue = "";// 变量名
+    varType = "";//变量类型
 
-    constructor(vm) {
-        super(vm);
-    }
-
-    validateParams() {
-        super.validateParams();
-        if (!this.varName) {
-            throw new Error('Variable name is required');
+    execute = async () => {
+        const dataId = this.getVariableDataId(this.paramValue, this.varType)
+        if (!dataId) {
+            throw new Error(`Variable "${this.paramValue}" not found`);
         }
-        if (!this.varType) {
-            throw new Error('Variable type is required');
-        }
-    }
-
-    blockExists(id) {
-        return false; // 变量块总是需要重新创建
-    }
-
-    /**
-     * 根据变量类型获取对应的dataId
-     */
-    getDataId() {
-        const categoryMap = {
-            'SCALAR': 'data',
-            'LIST': 'data-lists'
-        };
-
-        const category = categoryMap[this.varType];
-        if (!category) {
-            throw new Error(`Unknown variable type: "${this.varType}"`);
+        const domParamBlock = this.getScriptEl(dataId);
+        let pos = this.calcPosition();
+        if (await this.ensureVisible(pos[0], pos[1])) {
+            pos = this.calcPosition();
         }
 
-        const container = document.querySelector('.blocklyFlyout');
-        const nodes = container.querySelectorAll(`[data-category="${category}"]`);
-
-        for (const node of nodes) {
-            if (node.textContent.trim() === this.varName) {
-                return node.getAttribute("data-id");
-            }
-        }
-
-        throw new Error(`Variable "${this.varName}" not found in category "${category}"`);
+        await Rpa.drag(domParamBlock, pos[0], pos[1], this.dataId);
     }
+
 }
 
 /**
@@ -212,13 +164,25 @@ export class TextInputCommand extends InputCommand {
     /**
      * 执行文本输入操作
      */
-    async execute() {
+    execute = async () => {
         const pos = this.calcPosition();
         await this.ensureVisible(pos[0], pos[1]);
 
-        const slot = this.getParamEl(this.id);
-        await Rpa.type(slot, this.paramValue);
+        const slot = this.getParamBlock(this.id, this.paramName);
+        await Rpa.click(slot);
+        const input = document.querySelector('.blocklyHtmlInput');
+        input.value = this.paramValue;
+
     }
+
+    suggest =async () => {
+        const pos = this.calcPosition();
+        await this.ensureVisible(pos[0], pos[1]);
+
+        const slot = this.getParamBlock(this.id, this.paramName);
+        Rpa.highlightElement(slot);
+    }
+
 }
 
 /**
@@ -228,11 +192,11 @@ export class OptionInputCommand extends InputCommand {
     /**
      * 执行选项选择操作
      */
-    async execute() {
+    execute = async () => {
         const pos = this.calcPosition();
         await this.ensureVisible(pos[0], pos[1]);
 
-        const slot = this.getParamEl(this.id);
+        const slot = this.getParamBlock(this.id, this.paramName);
         await Rpa.click(slot);
 
         // 查找并点击对应的选项
@@ -240,8 +204,22 @@ export class OptionInputCommand extends InputCommand {
         for (const option of options) {
             if (option.textContent.trim() === this.paramValue) {
                 await Rpa.click(option);
-                break;
+                return;
             }
         }
+
+        //跳过颜色 todo
+        if (this.paramValue.startsWith('#')) {
+            return;
+        }
+        throw new Error(`Option "${this.paramValue}" not found`);
+    }
+
+    suggest =async () => {
+        const pos = this.calcPosition();
+        await this.ensureVisible(pos[0], pos[1]);
+
+        const slot = this.getParamBlock(this.id, this.paramName);
+        Rpa.highlightElement(slot);
     }
 }

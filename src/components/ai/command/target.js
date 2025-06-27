@@ -6,10 +6,6 @@ import Rpa from '../rpa';
 export class SelectTargetCommand extends Command {
     name = "";
 
-    constructor(vm) {
-        super(vm);
-    }
-
     validateParams() {
         super.validateParams();
         if (!this.name) {
@@ -20,7 +16,7 @@ export class SelectTargetCommand extends Command {
     /**
      * 执行目标选择操作
      */
-    async execute() {
+    execute = async () => {
         if (this.name === "Stage") {
             const labels = document.querySelectorAll('.stage-selector_label_Ao0a3');
             for (const label of labels) {
@@ -38,34 +34,5 @@ export class SelectTargetCommand extends Command {
                 }
             }
         }
-    }
-}
-
-/**
- * 选择分类命令
- */
-export class SelectCategoryCommand extends Command {
-    name = "";
-
-    constructor(vm) {
-        super(vm);
-    }
-
-    validateParams() {
-        super.validateParams();
-        if (!this.name) {
-            throw new Error('Category name is required');
-        }
-    }
-
-    /**
-     * 执行分类选择操作
-     */
-    async execute() {
-        const el = document.querySelector(`[class*="${this.name}"]`);
-        if (!el) {
-            throw new Error(`Category "${this.name}" not found`);
-        }
-        await Rpa.click(el);
     }
 }

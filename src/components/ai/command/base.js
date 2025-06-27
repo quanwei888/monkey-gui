@@ -11,6 +11,24 @@ export default class Command {
         this.vm = vm;
     }
 
+    getVariableDataId(varName, varType) {
+        var varTypeStr = "" // 默认是变量
+        if (varType == "list") {
+            varTypeStr = "list";
+        } else if (varType == "BROADCAST_MESSAGE") {
+            varTypeStr = "broadcast_msg";
+        }
+        const variables = this.vm.runtime.targets[0].variables;
+
+        for (const variable of Object.values(variables)) {
+            if (variable.name === varName && variable.type === varTypeStr) {
+                return variable.id;
+            }
+        }
+        return null;
+    }
+
+
     getElementCoords = (element, relativeToPage = true) => {
         // 如果传入的是字符串ID，获取对应的DOM元素
         if (typeof element === 'string') {
@@ -50,7 +68,11 @@ export default class Command {
     async exec() {
         this.validateParams();
         await this.execute();
-        console.log('Scripts after execution:', this.vm.editingTarget.blocks.getScripts());
+    }
+
+    async sug(...args) {
+        this.validateParams();
+        await this.suggest();
     }
 
     /**
@@ -65,16 +87,23 @@ export default class Command {
     /**
      * 具体执行逻辑，子类需重写
      */
-    async execute() {
+    execute = async () => {
         console.log("Execute method not implemented");
     }
+    /**
+     * 具体执行逻辑，子类需重写
+     */
+    async suggest() {
+        console.log("Execute method not implemented");
+    }
+
 
     /**
      * 检查指定ID的块是否存在
      */
-    blockExists(id) {
-        const element = document.querySelector(`[data-id="${id}"]`);
-        return element !== null;
+    blockExists(blockId) {
+        const blocks = this.vm.editingTarget.blocks._blocks;
+        return blockId in blocks;
     }
 
     /**
