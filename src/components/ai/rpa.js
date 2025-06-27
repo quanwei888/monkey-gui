@@ -229,7 +229,7 @@ class Rpa {
      * @param {number} targetY - 目标 Y 坐标
      * @returns {Promise<boolean>} - 操作是否成功
      */
-    async drag(element, targetX, targetY, newId = null) {
+    async drag(element, targetX, targetY) {
         try {
             this.block();
 
@@ -289,7 +289,7 @@ class Rpa {
             }
 
             // 2. 确保元素可见
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.scrollIntoView({behavior: 'smooth', block: 'center'});
             await new Promise(resolve => setTimeout(resolve, 100));
 
             // 3. 点击并确保焦点

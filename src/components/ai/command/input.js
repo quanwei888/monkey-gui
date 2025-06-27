@@ -76,8 +76,6 @@ class InputCommand extends Command {
  * 块输入命令
  */
 export class BlockInputCommand extends InputCommand {
-    dataId = null;
-
     /**
      * 计算块输入的位置
      */
@@ -106,25 +104,25 @@ export class BlockInputCommand extends InputCommand {
      * 执行块输入操作
      */
     execute = async () => {
-        if (this.blockExists(this.paramValue)) {
+        if (this.blockExists(this.paramValue.id)) {
             console.log("block exists", this.paramValue);
             return;
         }
-        const domParamBlock = this.getScriptEl(this.dataId);
+        const domParamBlock = this.getScriptEl(this.paramValue.dataId);
         const opcode = domParamBlock.getAttribute("data-id");
-        window.opcodeToId = {[opcode]: this.paramValue};//参数 block 的 id
+        window.opcodeToId = {[opcode]: this.paramValue.id};//参数 block 的 id
 
         let pos = this.calcPosition();
         if (await this.ensureVisible(pos[0], pos[1])) {
             pos = this.calcPosition();
         }
 
-        await Rpa.drag(domParamBlock, pos[0], pos[1], this.dataId);
+        await Rpa.drag(domParamBlock, pos[0], pos[1]);
         window.opcodeToId = {};
 
         // 执行后检查
-        if (!this.blockExists(this.paramValue)) {
-            console.log(`Block input creation failed for ID: "${this.paramValue}"`);
+        if (!this.blockExists(this.paramValue.id)) {
+            console.log(`Block input creation failed for ID: "${this.paramValue.id}"`);
         }
     }
 
@@ -138,13 +136,11 @@ export class BlockInputCommand extends InputCommand {
  * 变量输入命令
  */
 export class VariableInputCommand extends BlockInputCommand {
-    paramValue = "";// 变量名
-    varType = "";//变量类型
 
     execute = async () => {
-        const dataId = this.getVariableDataId(this.paramValue, this.varType)
+        const dataId = this.getVariableDataId(this.paramValue.name, this.paramValue.type)
         if (!dataId) {
-            throw new Error(`Variable "${this.paramValue}" not found`);
+            throw new Error(`Variable "${this.paramValue.name}" not found`);
         }
         const domParamBlock = this.getScriptEl(dataId);
         let pos = this.calcPosition();
@@ -152,7 +148,7 @@ export class VariableInputCommand extends BlockInputCommand {
             pos = this.calcPosition();
         }
 
-        await Rpa.drag(domParamBlock, pos[0], pos[1], this.dataId);
+        await Rpa.drag(domParamBlock, pos[0], pos[1]);
     }
 
 }
