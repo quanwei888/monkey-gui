@@ -11,12 +11,18 @@ import {
 import Blockly from 'scratch-blocks';
 
 const AiTestComponent = function (props) {
+    const startSoundRef = useRef(null);
     const {
         vm,
         ...componentProps
     } = props;
     console.log(222,Blockly.ScratchMsgs);
-
+    const handleTest = async () =>{
+        const cmd = new AddBlockCommand(vm);
+        cmd.id="id_23" + Date.now().toString();
+        cmd.dataId = "event_whenbroadcastreceived";
+        await cmd.exec();
+    }
     const handleRemote = async () => {
         const hashMatch = window.location.hash.match(/#(.+)/);
         const projectId = hashMatch ? hashMatch[1] : null;
@@ -64,19 +70,23 @@ const AiTestComponent = function (props) {
             }
             console.log(cmd_json);
             Object.assign(cmd, cmd_json);
-            if (cmd.id == "id_30") {
+            if (cmd.id == "id_23") {
                 console.log("id is null");
             }
             //await cmd.sug();
             console.log("start execute", cmd.id);
             await cmd.exec();
+            //startSoundRef.current.currentTime = 0;
+            //startSoundRef.current.play();
             console.log("end execute", cmd.id);
         }
     };
 
     return (
         <div>
-            <button onClick={handleRemote}>AAA{Blockly.Msg.CONTROLS_IF_MSG_IF}</button>
+            <audio ref={startSoundRef} src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"/>
+            <button onClick={handleRemote}>AAA</button>
+            <button onClick={handleTest}>BBB</button>
         </div>
     );
 };

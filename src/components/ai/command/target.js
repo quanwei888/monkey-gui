@@ -28,11 +28,12 @@ export class SelectTargetCommand extends Command {
         } else {
             const sprites = document.querySelectorAll('.sprite-selector-item_sprite-name_iMqNV');
             for (const sprite of sprites) {
-                if (sprite.textContent.trim() === this.name) {
+                if (sprite.textContent.trim() === this.name.trim()) {
                     await Rpa.click(sprite);
                     break;
                 }
             }
         }
+        await Rpa.wait(1000);
     }
 }

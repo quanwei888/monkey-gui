@@ -90,6 +90,7 @@ export default class Command {
     execute = async () => {
         console.log("Execute method not implemented");
     }
+
     /**
      * 具体执行逻辑，子类需重写
      */
@@ -138,20 +139,7 @@ export default class Command {
         return path;
     }
 
-    /**
-     * 确保指定坐标在可视区域内
-     */
-    async ensureVisible(x, y) {
-        const canvas = document.querySelector('.injectionDiv');
-        const rect = canvas.getBoundingClientRect();
-
-        const bounds = {
-            minX: 300,
-            maxX: rect.x + rect.width - 50,
-            minY: rect.y + 100,
-            maxY: rect.y + rect.height - 200
-        };
-
+    async _ensureVisible(svgCanvas, bounds, x, y) {
         console.log('Canvas bounds:', bounds);
 
         let targetX = -1;
@@ -167,9 +155,44 @@ export default class Command {
             targetY = y;
         }
 
-        await Rpa.center(targetX, targetY);
-        return targetX !== -1 || targetY !== -1;
+        if (targetX == -1 && targetY == -1) {
+            return false;
+        }
+        await Rpa.center(svgCanvas, targetX, targetY);
+        return true;
     }
+
+    async ensureScriptBlockVisible(x, y) {
+        const canvas = document.querySelector('.injectionDiv');
+        const rect = canvas.getBoundingClientRect();
+
+        const bounds = {
+            minX: 300,
+            maxX: rect.x + rect.width - 50,
+            minY: rect.y + 100,
+            maxY: rect.y + rect.height - 200
+        };
+        const svgCanvas = document.querySelector('.blocklyWorkspace');
+        return this._ensureVisible(svgCanvas, bounds, x, y);
+    }
+
+    async ensureToolboxBlockVisible(dataId) {
+        const canvas = document.querySelector('.injectionDiv');
+        const rect = canvas.getBoundingClientRect();
+
+        const bounds = {
+            minX: 0,
+            maxX: Infinity,
+            minY: rect.y + 100,
+            maxY: rect.y + rect.height - 200
+        };
+
+        const domBlock = this.getScriptEl(dataId);
+        const bbox = domBlock.getBoundingClientRect();
+        const svgCanvas = document.querySelector('.blocklyFlyout');
+        return this._ensureVisible(svgCanvas, bounds, bbox.x, bbox.y);
+    }
+
 }
 
 export const VariableType = {

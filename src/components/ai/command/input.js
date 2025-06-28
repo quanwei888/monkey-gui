@@ -44,15 +44,34 @@ class InputCommand extends Command {
             }
         }
 
+        // @hack
+        var idx = 0;
         if (paramName === "CONDITION") {
-            const domBlock = this.getScriptEl(blockId);
-            const pElements = domBlock.querySelectorAll(":scope > path");
+            idx = 0
+        }
+        if (paramName === "OPERAND1") {
+            idx = 0
+        }
+        if (paramName === "OPERAND2") {
+            idx = 1
+        }
 
-            for (const p of pElements) {
-                const typeAttr = p.getAttribute("data-argument-type");
-                if (["boolean"].includes(typeAttr)) {
-                    return p;
-                }
+        const domBlock = this.getScriptEl(blockId);
+        const pElements = domBlock.querySelectorAll(":scope > path");
+
+        const ps = []
+        for (const p of pElements) {
+            const typeAttr = p.getAttribute("data-argument-type");
+            if (["boolean"].includes(typeAttr)) {
+                ps.push(p);
+            }
+        }
+
+        if (ps.length > 0) {
+            if (idx >= ps.length) {
+                return ps[0];
+            } else {
+                return ps[idx];
             }
         }
 
@@ -114,10 +133,10 @@ export class BlockInputCommand extends InputCommand {
             window.opcodeToId = {[opcode]: this.paramValue.id};//参数 block 的 id
 
             let pos = this.calcPosition();
-            if (await this.ensureVisible(pos[0], pos[1])) {
+            if (await this.ensureScriptBlockVisible(pos[0], pos[1])) {
                 pos = this.calcPosition();
             }
-
+            window.opcodeToId = {[opcode]: this.paramValue.id};//参数 block 的 id
             await Rpa.drag(domParamBlock, pos[0], pos[1]);
             window.opcodeToId = {};
 
@@ -150,13 +169,12 @@ export class VariableInputCommand extends BlockInputCommand {
             }
             const domParamBlock = this.getScriptEl(dataId);
             let pos = this.calcPosition();
-            if (await this.ensureVisible(pos[0], pos[1])) {
+            if (await this.ensureScriptBlockVisible(pos[0], pos[1])) {
                 pos = this.calcPosition();
             }
             await Rpa.drag(domParamBlock, pos[0], pos[1]);
         } catch (error) {
             console.error('VariableInputCommand execute error:', error);
-            throw error;
         }
     }
 
@@ -172,7 +190,7 @@ export class TextInputCommand extends InputCommand {
     execute = async () => {
         try {
             const pos = this.calcPosition();
-            await this.ensureVisible(pos[0], pos[1]);
+            await this.ensureScriptBlockVisible(pos[0], pos[1]);
 
             const slot = this.getParamBlock(this.id, this.paramName);
             await Rpa.click(slot);
@@ -184,13 +202,12 @@ export class TextInputCommand extends InputCommand {
 
         } catch (error) {
             console.error('TextInputCommand execute error:', error);
-            throw error;
         }
     }
 
     suggest = async () => {
         const pos = this.calcPosition();
-        await this.ensureVisible(pos[0], pos[1]);
+        await this.ensureScriptBlockVisible(pos[0], pos[1]);
 
         const slot = this.getParamBlock(this.id, this.paramName);
         Rpa.highlightElement(slot);
@@ -208,7 +225,7 @@ export class OptionInputCommand extends InputCommand {
     execute = async () => {
         try {
             const pos = this.calcPosition();
-            await this.ensureVisible(pos[0], pos[1]);
+            await this.ensureScriptBlockVisible(pos[0], pos[1]);
 
             const slot = this.getParamBlock(this.id, this.paramName);
             await Rpa.click(slot);
@@ -229,13 +246,12 @@ export class OptionInputCommand extends InputCommand {
             throw new Error(`Option "${this.paramValue}" not found`);
         } catch (error) {
             console.error('OptionInputCommand execute error:', error);
-            throw error;
         }
     }
 
     suggest = async () => {
         const pos = this.calcPosition();
-        await this.ensureVisible(pos[0], pos[1]);
+        await this.ensureScriptBlockVisible(pos[0], pos[1]);
 
         const slot = this.getParamBlock(this.id, this.paramName);
         Rpa.highlightElement(slot);

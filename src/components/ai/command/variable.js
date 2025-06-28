@@ -89,6 +89,7 @@ export class CreateVariableCommand extends Command {
         await Rpa.click(ok);
         await Rpa.wait(1000);
         const varType = this.varType;
+        /*
         await this.waitUntil(() => {
             const dataId = this.getVariableDataId(varName, varType);
             if (dataId) {
@@ -96,6 +97,7 @@ export class CreateVariableCommand extends Command {
             }
             return false;
         });
+        */
     }
 
     // 轮询函数：等待某个条件为 true

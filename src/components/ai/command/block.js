@@ -30,16 +30,16 @@ class BlockCommand extends Command {
             return;
         }
 
-        const blockEl = this.getScriptEl(this.dataId);
-        const opcode = blockEl.getAttribute("data-id");
-        window.opcodeToId = { [opcode]: this.id };
+        const domBlock = this.getScriptEl(this.dataId);
+        const opcode = domBlock.getAttribute("data-id");
 
         let pos = this.calcPosition();
-        if (await this.ensureVisible(pos[0], pos[1])) {
+        await this.ensureToolboxBlockVisible(this.dataId)
+        if (await this.ensureScriptBlockVisible(pos[0], pos[1])) {
             pos = this.calcPosition();
         }
-
-        await Rpa.drag(blockEl, pos[0], pos[1], this.dataId);
+        window.opcodeToId = {[opcode]: this.id};
+        await Rpa.drag(domBlock, pos[0], pos[1]);
         window.opcodeToId = {};
 
         // 执行后检查
@@ -47,6 +47,7 @@ class BlockCommand extends Command {
             console.log(`Block creation failed for ID: "${this.id}"`);
         }
     }
+
     async suggest() {
         const blockEl = this.getScriptEl(this.dataId);
         Rpa.highlightElement(blockEl);
@@ -85,7 +86,7 @@ export class AddBlockCommand extends BlockCommand {
                 maxY = bottomY;
             }
         }
-        if (Math.abs(minX - 400) <20) {
+        if (Math.abs(minX - 400) < 20) {
             minX = 400
         }
         return [minX, maxY + 50];
@@ -116,6 +117,7 @@ export class ConnectBlockCommand extends BlockCommand {
 }
 
 
+var currentCategory = null;
 /**
  * 选择分类命令
  */
@@ -133,8 +135,13 @@ export class SelectCategoryCommand extends Command {
      * 执行分类选择操作
      */
     execute = async () => {
+        if (currentCategory === this.name) {
+            return;
+        }
         await Rpa.selectCategory(this.name)
+        currentCategory = this.name;
     }
+
     async suggest() {
         Rpa.highlightCategory(this.name);
     }

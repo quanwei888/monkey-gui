@@ -101,13 +101,10 @@ class Rpa {
         return this.center(elementCenterX, elementCenterY)
     }
 
-    async center(x, y) {
+    async center(svgCanvas,x, y) {
         this.block();
-        // 创建用户事件实例
-        const svgCanvas = document.querySelector('.blocklyWorkspace');
         //用 div 来计算bbox
         const svgContainer = document.querySelector('.injectionDiv');
-        const user = userEvent.setup();
 
         // 获取画布的中心点
         const canvasRect = svgContainer.getBoundingClientRect();
@@ -121,7 +118,7 @@ class Rpa {
         console.log(`移动距离: X = ${deltaX}, Y = ${deltaY}`);
 
         // 使用多个小增量来模拟平滑滚动
-        const STEPS = 10;
+        const STEPS = 2;
         var stepX = deltaX / STEPS;
         var stepY = deltaY / STEPS;
 
@@ -195,16 +192,17 @@ class Rpa {
             return false;
         }
     }
+
     /**
      * 点击指定元素
      * @param {string|Element} selector - 要点击的元素或选择器
      * @returns {Promise<boolean>} - 操作是否成功
      */
-    async clickXY(x,y) {
+    async clickXY(x, y) {
         try {
             this.block();
 
-            await this.user.click(document.body, { clientX: x, clientY: y });
+            await this.user.click(document.body, {clientX: x, clientY: y});
             console.log('点击成功');
 
             this.unblock(); // 操作完成后解除阻止
@@ -227,14 +225,14 @@ class Rpa {
      * @param {number} delay - 每步延迟时间(毫秒)，默认为10
      * @returns {Promise<void>}
      */
-    async smoothDrag(startX, startY, endX, endY, steps = 50, delay = 10) {
+    async smoothDrag(element, startX, startY, endX, endY, steps = 50, delay = 10) {
         for (let i = 1; i <= steps; i++) {
             const stepX = startX + ((endX - startX) * i / steps);
             const stepY = startY + ((endY - startY) * i / steps);
 
             await this.user.pointer({
                 target: document.body,
-                coords: {clientX: stepX, clientY: stepY}
+                coords: {clientX: stepX, clientY: stepY},
             });
 
             // 添加小延迟使拖动更自然
@@ -274,9 +272,9 @@ class Rpa {
             });
 
             // 第一步：先拖动一点
-            await this.smoothDrag(startX, startY, 300, startY, 2);
-            await this.smoothDrag(300, startY, 300, endY, 5);
-            await this.smoothDrag(300, endY, endX, endY, 5);
+            await this.smoothDrag(element, startX, startY, 300, startY, 2);
+            await this.smoothDrag(element, 300, startY, 300, endY, 5);
+            await this.smoothDrag(element, 300, endY, endX, endY, 5);
 
             // 鼠标释放
             await this.user.pointer('[/MouseLeft]');
@@ -360,8 +358,8 @@ class Rpa {
         if (!el) {
             throw new Error(`Category "${name}" not found`);
         }
-        await this.click(el);
-        //await this.wait(1000);
+        //await this.click(el);
+        //await this.wait(500);
     }
 
     highlightCategory(name) {
@@ -423,6 +421,16 @@ class Rpa {
             }
         }, 300);
     }
+
+    isElementFullyInViewport = el => {
+        const rect = el.getBoundingClientRect();
+        return (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= window.innerHeight &&
+            rect.right <= window.innerWidth
+        );
+    };
 
 }
 
