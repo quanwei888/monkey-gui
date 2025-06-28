@@ -104,25 +104,30 @@ export class BlockInputCommand extends InputCommand {
      * 执行块输入操作
      */
     execute = async () => {
-        if (this.blockExists(this.paramValue.id)) {
-            console.log("block exists", this.paramValue);
-            return;
-        }
-        const domParamBlock = this.getScriptEl(this.paramValue.dataId);
-        const opcode = domParamBlock.getAttribute("data-id");
-        window.opcodeToId = {[opcode]: this.paramValue.id};//参数 block 的 id
+        try {
+            if (this.blockExists(this.paramValue.id)) {
+                console.log("block exists", this.paramValue);
+                return;
+            }
+            const domParamBlock = this.getScriptEl(this.paramValue.dataId);
+            const opcode = domParamBlock.getAttribute("data-id");
+            window.opcodeToId = {[opcode]: this.paramValue.id};//参数 block 的 id
 
-        let pos = this.calcPosition();
-        if (await this.ensureVisible(pos[0], pos[1])) {
-            pos = this.calcPosition();
-        }
+            let pos = this.calcPosition();
+            if (await this.ensureVisible(pos[0], pos[1])) {
+                pos = this.calcPosition();
+            }
 
-        await Rpa.drag(domParamBlock, pos[0], pos[1]);
-        window.opcodeToId = {};
+            await Rpa.drag(domParamBlock, pos[0], pos[1]);
+            window.opcodeToId = {};
 
-        // 执行后检查
-        if (!this.blockExists(this.paramValue.id)) {
-            console.log(`Block input creation failed for ID: "${this.paramValue.id}"`);
+            // 执行后检查
+            if (!this.blockExists(this.paramValue.id)) {
+                console.log(`Block input creation failed for ID: "${this.paramValue.id}"`);
+            }
+        } catch (error) {
+            console.error('BlockInputCommand execute error:', error);
+            throw error; // 可根据需要决定是否向上传递
         }
     }
 
@@ -138,17 +143,21 @@ export class BlockInputCommand extends InputCommand {
 export class VariableInputCommand extends BlockInputCommand {
 
     execute = async () => {
-        const dataId = this.getVariableDataId(this.paramValue.name, this.paramValue.type)
-        if (!dataId) {
-            throw new Error(`Variable "${this.paramValue.name}" not found`);
+        try {
+            const dataId = this.getVariableDataId(this.paramValue.name, this.paramValue.type)
+            if (!dataId) {
+                throw new Error(`Variable "${this.paramValue.name}" not found`);
+            }
+            const domParamBlock = this.getScriptEl(dataId);
+            let pos = this.calcPosition();
+            if (await this.ensureVisible(pos[0], pos[1])) {
+                pos = this.calcPosition();
+            }
+            await Rpa.drag(domParamBlock, pos[0], pos[1]);
+        } catch (error) {
+            console.error('VariableInputCommand execute error:', error);
+            throw error;
         }
-        const domParamBlock = this.getScriptEl(dataId);
-        let pos = this.calcPosition();
-        if (await this.ensureVisible(pos[0], pos[1])) {
-            pos = this.calcPosition();
-        }
-
-        await Rpa.drag(domParamBlock, pos[0], pos[1]);
     }
 
 }
@@ -161,17 +170,25 @@ export class TextInputCommand extends InputCommand {
      * 执行文本输入操作
      */
     execute = async () => {
-        const pos = this.calcPosition();
-        await this.ensureVisible(pos[0], pos[1]);
+        try {
+            const pos = this.calcPosition();
+            await this.ensureVisible(pos[0], pos[1]);
 
-        const slot = this.getParamBlock(this.id, this.paramName);
-        await Rpa.click(slot);
-        const input = document.querySelector('.blocklyHtmlInput');
-        input.value = this.paramValue;
+            const slot = this.getParamBlock(this.id, this.paramName);
+            await Rpa.click(slot);
+            const input = document.querySelector('.blocklyHtmlInput');
+            if (input.value.trim() !== this.paramValue.trim()) {
+                await Rpa.type(input, this.paramValue.toString());
+                input.value = this.paramValue;
+            }
 
+        } catch (error) {
+            console.error('TextInputCommand execute error:', error);
+            throw error;
+        }
     }
 
-    suggest =async () => {
+    suggest = async () => {
         const pos = this.calcPosition();
         await this.ensureVisible(pos[0], pos[1]);
 
@@ -189,29 +206,34 @@ export class OptionInputCommand extends InputCommand {
      * 执行选项选择操作
      */
     execute = async () => {
-        const pos = this.calcPosition();
-        await this.ensureVisible(pos[0], pos[1]);
+        try {
+            const pos = this.calcPosition();
+            await this.ensureVisible(pos[0], pos[1]);
 
-        const slot = this.getParamBlock(this.id, this.paramName);
-        await Rpa.click(slot);
+            const slot = this.getParamBlock(this.id, this.paramName);
+            await Rpa.click(slot);
 
-        // 查找并点击对应的选项
-        const options = document.querySelectorAll('.goog-menuitem-content');
-        for (const option of options) {
-            if (option.textContent.trim() === this.paramValue) {
-                await Rpa.click(option);
+            // 查找并点击对应的选项
+            const options = document.querySelectorAll('.goog-menuitem-content');
+            for (const option of options) {
+                if (option.textContent.trim() === this.paramValue) {
+                    await Rpa.click(option);
+                    return;
+                }
+            }
+
+            //跳过颜色 todo
+            if (this.paramValue.startsWith('#')) {
                 return;
             }
+            throw new Error(`Option "${this.paramValue}" not found`);
+        } catch (error) {
+            console.error('OptionInputCommand execute error:', error);
+            throw error;
         }
-
-        //跳过颜色 todo
-        if (this.paramValue.startsWith('#')) {
-            return;
-        }
-        throw new Error(`Option "${this.paramValue}" not found`);
     }
 
-    suggest =async () => {
+    suggest = async () => {
         const pos = this.calcPosition();
         await this.ensureVisible(pos[0], pos[1]);
 

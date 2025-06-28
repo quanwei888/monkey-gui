@@ -8,11 +8,14 @@ import {
     OptionInputCommand, SelectCategoryCommand, SelectTargetCommand, VariableInputCommand
 } from './command';
 
+import Blockly from 'scratch-blocks';
+
 const AiTestComponent = function (props) {
     const {
         vm,
         ...componentProps
     } = props;
+    console.log(222,Blockly.ScratchMsgs);
 
     const handleRemote = async () => {
         const hashMatch = window.location.hash.match(/#(.+)/);
@@ -23,6 +26,7 @@ const AiTestComponent = function (props) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const cmds = await response.json();
+        //console.log(222,Blockly.Blocks,Blockly.Msg);
 
         var cmd = null;
         for (const cmd_json of cmds) {
@@ -72,7 +76,7 @@ const AiTestComponent = function (props) {
 
     return (
         <div>
-            <button onClick={handleRemote}>Replay</button>
+            <button onClick={handleRemote}>AAA{Blockly.Msg.CONTROLS_IF_MSG_IF}</button>
         </div>
     );
 };

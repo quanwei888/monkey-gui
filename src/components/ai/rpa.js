@@ -195,6 +195,26 @@ class Rpa {
             return false;
         }
     }
+    /**
+     * 点击指定元素
+     * @param {string|Element} selector - 要点击的元素或选择器
+     * @returns {Promise<boolean>} - 操作是否成功
+     */
+    async clickXY(x,y) {
+        try {
+            this.block();
+
+            await this.user.click(document.body, { clientX: x, clientY: y });
+            console.log('点击成功');
+
+            this.unblock(); // 操作完成后解除阻止
+            return true;
+        } catch (error) {
+            console.error('点击操作失败:', error);
+            this.unblock(); // 发生错误时也要解除阻止
+            return false;
+        }
+    }
 
     /**
      * 模拟多步拖动以使动作更自然
@@ -302,6 +322,7 @@ class Rpa {
             await new Promise(resolve => setTimeout(resolve, 100));
 
             // 5. 清空现有内容并输入
+            await this.user.clear(element);
             await this.user.keyboard(text);
 
             // 6. 验证输入结果
