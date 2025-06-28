@@ -68,6 +68,7 @@ class InputCommand extends Command {
         }
 
         if (ps.length > 0) {
+
             if (idx >= ps.length) {
                 return ps[0];
             } else {
@@ -161,8 +162,38 @@ export class BlockInputCommand extends InputCommand {
  */
 export class VariableInputCommand extends BlockInputCommand {
 
+    existsVariable = () => {
+        const blocks = this.vm.editingTarget.blocks._blocks;
+        const block = blocks[this.id];
+
+        if (!(this.paramName in block.inputs)) {
+            return false;
+        }
+
+        const input = block.inputs[this.paramName];
+        if (input.block == input.shadow) {
+            return false;
+        }
+        const variableBlock = blocks[input.block]
+
+        if (!variableBlock) {
+            return false;
+        }
+
+        const variable = variableBlock.fields["VARIABLE"];
+        if (variable.value == this.paramValue.name) {
+            return true;
+        }
+        return false;
+
+
+    }
     execute = async () => {
         try {
+            if (this.existsVariable()) {
+                return;
+            }
+
             const dataId = this.getVariableDataId(this.paramValue.name, this.paramValue.type)
             if (!dataId) {
                 throw new Error(`Variable "${this.paramValue.name}" not found`);

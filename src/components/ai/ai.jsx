@@ -1,278 +1,186 @@
-import classNames from 'classnames';
-import PropTypes from 'prop-types';
+
 import React, {useEffect, useState, useRef} from 'react';
-import PlayIcon from './play.svg';
-import styles from './ai.css';
-import Rpa from './rpa';
 
-const AiComponent = function (props) {
-    const [showModal, setShowModal] = useState(false); // 控制浮层显示
-    const [question, setQuestion] = useState('下一步要怎么办？'); // 用户输入的问题
-    const [isLoading, setIsLoading] = useState(false); // 加载状态
-    const modalRef = useRef(null); // 浮层引用，用于点击外部关闭
-    const currentAudioSource = useRef(null); // 当前播放的音频源引用
 
-    const baseUrl = 'http://api.xiaomalong.org:3001';
-    const {
-        vm,
-        ...componentProps
-    } = props;
+export default function FloatingAssistant() {
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false)
+    const [isChatOpen, setIsChatOpen] = useState(false)
+    const [messages, setMessages] = useState([
+        {
+            id: 1,
+            text: "你好，有什么可以帮你的吗？",
+            isUser: false,
+            timestamp: new Date(),
+        },
+    ])
+    const [inputValue, setInputValue] = useState("")
 
-    // 获取项目ID
-    const getHashProjectId = () => {
-        const hashMatch = window.location.hash.match(/#(\d+)/);
-        return hashMatch ? hashMatch[1] : null;
-    };
-
-    // 停止当前播放的音频
-    const stopCurrentAudio = () => {
-        if (currentAudioSource.current) {
-            try {
-                currentAudioSource.current.stop();
-                currentAudioSource.current = null;
-            } catch (error) {
-                console.log('停止音频播放:', error);
-            }
-        }
-    };
-
-    const play = async (text, options = {}) => {
-        try {
-            // 停止当前播放的音频
-            stopCurrentAudio();
-
-            const audioUrl = `${baseUrl}/audio`;
-            const defaultOptions = {
-                channels: 1,
-                sampleRate: 16000,
-                bytesPerSample: 2
-            };
-            const audioOptions = {...defaultOptions, ...options};
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-            const response = await fetch(audioUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({text: text})
-            });
-
-            const arrayBuffer = await response.arrayBuffer();
-            const pcmData = new Int16Array(arrayBuffer);
-            const audioBuffer = audioContext.createBuffer(
-                audioOptions.channels,
-                pcmData.length,
-                audioOptions.sampleRate
-            );
-
-            const channelData = audioBuffer.getChannelData(0);
-            for (let i = 0; i < pcmData.length; i++) {
-                channelData[i] = pcmData[i] / 32768.0;
-            }
-
-            const source = audioContext.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(audioContext.destination);
-
-            // 保存当前音频源引用
-            currentAudioSource.current = source;
-
-            source.start(0);
-
-            return new Promise(resolve => {
-                source.onended = function () {
-                    currentAudioSource.current = null;
-                    resolve();
-                };
-            });
-
-        } catch (error) {
-            console.error('播放音频时出错:', error);
-            currentAudioSource.current = null;
-            throw error;
-        }
-    };
-
-    const askAi = async (userQuestion) => {
-        const hashProjectId = getHashProjectId();
-        if (!hashProjectId) {
-            console.error('无法获取项目ID');
-            return;
-        }
-
-        // 设置加载状态
-        setIsLoading(true);
-
-        const helpUrl = `${baseUrl}/p/${hashProjectId}/ask_for_help`;
-
-        try {
-            const projectJson = props.vm.toJSON();
-            const response = await fetch(helpUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    json: projectJson,
-                    question: userQuestion
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('AI Response:', data);
-
-            // 确保AI回复内容存在
-            const aiResponse = data.tip || data.response || data.message || '抱歉，我没有收到有效的回复。';
-            console.log('AI Response content:', aiResponse);
-
-            // 播放音频
-            try {
-                await play(aiResponse);
-            } catch (audioError) {
-                console.error('音频播放失败:', audioError);
-            }
-
-        } catch (error) {
-            const errorMessage = "哎呀，我现在出了点小问题，请稍后再试。";
-            console.error('AI request error:', error);
-
-            try {
-                await play(errorMessage);
-            } catch (audioError) {
-                console.error('错误提示音播放失败:', audioError);
-            }
-        } finally {
-            // 无论成功还是失败，都要清除加载状态
-            setIsLoading(false);
-        }
-    };
-
-    const handleRpa = async () => {
-        await Rpa.click('[data-id="motion_movesteps"]');
-        const canvasDom = document.querySelector('.blocklyWorkspace');
-        const block_Dom =  Rpa.findElementByDataId("change_num");
-        await Rpa.centerBlock(canvasDom,block_Dom);
-        //await Rpa.drag('[data-id="motion_movesteps"]', 500, 200);
-
+    const handleMainButtonClick = () => {
+        setIsPopoverOpen(!isPopoverOpen)
     }
 
-    // 处理点击事件
-    const handleClick = () => {
-        // 显示浮层让用户输入问题
-        setShowModal(true);
-    };
+    const handleQuestionClick = () => {
+        setIsPopoverOpen(false)
+        setIsChatOpen(true)
+    }
 
-    // 处理确认按钮点击
-    const handleConfirm = () => {
-        if (question.trim() && !isLoading) {
-            askAi(question);
-            setQuestion(''); // 清空输入
-            setShowModal(false); // 关闭浮层
+    const handleSendMessage = () => {
+        if (!inputValue.trim()) return
+
+        const newMessage = {
+            id: messages.length + 1,
+            text: inputValue,
+            isUser: true,
+            timestamp: new Date(),
         }
-    };
 
-    // 处理取消按钮点击
-    const handleCancel = () => {
-        setShowModal(false);
-        setQuestion(''); // 清空输入
-        // 停止当前播放的音频
-        stopCurrentAudio();
-    };
+        setMessages((prev) => [...prev, newMessage])
+        setInputValue("")
 
-    // 处理输入变化
-    const handleInputChange = (e) => {
-        setQuestion(e.target.value);
-    };
+        // 模拟回复
+        setTimeout(() => {
+            const responses = ["好的，我明白了。", "这个问题很有意思。", "让我想想...", "我来帮你解答。", "还有其他问题吗？"]
+            const aiResponse = {
+                id: messages.length + 2,
+                text: responses[Math.floor(Math.random() * responses.length)],
+                isUser: false,
+                timestamp: new Date(),
+            }
+            setMessages((prev) => [...prev, aiResponse])
+        }, 800)
+    }
 
-    // 处理键盘事件
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleConfirm();
-        } else if (e.key === 'Escape') {
-            handleCancel();
+    const handleKeyPress = (e) => {
+        if (e.key === "Enter") {
+            handleSendMessage()
         }
-    };
-
-    // 检查项目ID是否存在
-    const hashProjectId = getHashProjectId();
-    if (!hashProjectId) {
-        return (<div></div>);
     }
 
     return (
-        <>
-            <div
-                className={classNames(
-                    styles.ai,
-                    {[styles.loading]: isLoading}
-                )}
-                title={isLoading ? "AI正在思考中..." : "点击询问AI"}
+        <div className="relative">
+            {/* 主按钮 - 固定定位在右侧中间 */}
+            <button
+                onClick={handleMainButtonClick}
+                className="fixed top-1/2 right-8 transform -translate-y-1/2 w-16 h-16 bg-white/90 backdrop-blur-xl rounded-full shadow-lg hover:shadow-xl transition-all duration-300 z-50 flex items-center justify-center border border-gray-100"
             >
-                <button onClick={handleRpa} disabled={isLoading}>AA</button>
-                <img src={PlayIcon} alt="AI"/>
-                {isLoading && <div className={styles.loadingSpinner}></div>}
-            </div>
+                <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+            </button>
 
-            {/* 简单输入浮层 */}
-            {showModal && (
-                <div className={styles.modalOverlay}>
-                    <div ref={modalRef} className={styles.modal}>
-                        <div className={styles.modalHeader}>
-                            <h3>我是你的 AI 老师</h3>
-                            <button
-                                className={styles.closeButton}
-                                onClick={handleCancel}
-                                disabled={isLoading}
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <div className={styles.modalBody}>
-                            <textarea
-                                className={styles.questionInput}
-                                value={question}
-                                onChange={handleInputChange}
-                                onKeyDown={handleKeyDown}
-                                placeholder="请输入你的问题..."
-                                autoFocus
-                                disabled={isLoading}
-                            />
-                            <div className={styles.buttonArea}>
-                                <button
-                                    className={styles.cancelButton}
-                                    onClick={handleCancel}
-                                    disabled={isLoading}
-                                >
-                                    取消
-                                </button>
-                                <button
-                                    className={styles.confirmButton}
-                                    onClick={handleConfirm}
-                                    disabled={!question.trim() || isLoading}
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <span className={styles.buttonSpinner}></span>
-                                            思考中...
-                                        </>
-                                    ) : (
-                                        '确认'
-                                    )}
-                                </button>
+            {/* 功能菜单 - 在按钮左侧 */}
+            {isPopoverOpen && (
+                <div className="fixed top-1/2 right-28 transform -translate-y-1/2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                    <div className="p-2">
+                        <button
+                            className="w-full flex items-center px-4 py-3 text-gray-800 hover:bg-gray-50 rounded-xl transition-all duration-200"
+                            onClick={() => setIsPopoverOpen(false)}
+                        >
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                <div className="w-4 h-3 border-2 border-blue-600 rounded-sm border-b-0"></div>
                             </div>
+                            <span className="font-medium">跟学</span>
+                        </button>
+                        <button
+                            className="w-full flex items-center px-4 py-3 text-gray-800 hover:bg-gray-50 rounded-xl transition-all duration-200"
+                            onClick={() => setIsPopoverOpen(false)}
+                        >
+                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                <div className="w-4 h-4 border-2 border-green-600 rounded-full relative">
+                                    <div className="absolute top-1 left-1 w-1 h-1 bg-green-600 rounded-full"></div>
+                                </div>
+                            </div>
+                            <span className="font-medium">挑战</span>
+                        </button>
+                        <button
+                            className="w-full flex items-center px-4 py-3 text-gray-800 hover:bg-gray-50 rounded-xl transition-all duration-200"
+                            onClick={handleQuestionClick}
+                        >
+                            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                <div className="w-4 h-4 border-2 border-purple-600 rounded-full relative">
+                                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-purple-600 rounded-full"></div>
+                                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0.5 h-1 bg-purple-600"></div>
+                                </div>
+                            </div>
+                            <span className="font-medium">提问</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* 对话窗口 - 固定在右下角 */}
+            {isChatOpen && (
+                <div className="fixed bottom-16 right-8 w-80 h-96 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-100 z-50 flex flex-col overflow-hidden">
+                    {/* 头部 */}
+                    <div className="flex items-center justify-between px-6 py-4">
+                        <h3 className="text-lg font-semibold text-gray-900">助手</h3>
+                        <button
+                            onClick={() => setIsChatOpen(false)}
+                            className="w-7 h-7 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200"
+                        >
+                            <div className="w-3 h-3 relative">
+                                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-600 transform -translate-y-1/2 rotate-45"></div>
+                                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-600 transform -translate-y-1/2 -rotate-45"></div>
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* 消息区域 */}
+                    <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-4">
+                        {messages.map((message) => (
+                            <div key={message.id} className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}>
+                                <div
+                                    className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm ${
+                                        message.isUser ? "bg-blue-500 text-white rounded-br-md" : "bg-gray-100 text-gray-900 rounded-bl-md"
+                                    }`}
+                                >
+                                    {message.text}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* 输入区域 */}
+                    <div className="px-6 pb-6">
+                        <div className="flex items-center bg-gray-50 rounded-2xl px-4 py-2">
+                            <input
+                                type="text"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                placeholder="输入消息..."
+                                className="flex-1 bg-transparent outline-none text-gray-900 placeholder-gray-500"
+                            />
+                            <button
+                                onClick={handleSendMessage}
+                                disabled={!inputValue.trim()}
+                                className={`ml-2 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+                                    inputValue.trim() ? "bg-blue-500 hover:bg-blue-600" : "bg-gray-200"
+                                }`}
+                            >
+                                <div className={`w-4 h-4 ${inputValue.trim() ? "text-white" : "text-gray-400"}`}>
+                                    <div className="w-full h-full relative">
+                                        <div className="absolute top-1/2 left-0 w-0 h-0 border-l-4 border-l-current border-t-2 border-b-2 border-t-transparent border-b-transparent transform -translate-y-1/2"></div>
+                                        <div className="absolute top-1/2 right-1 w-2 h-0.5 bg-current transform -translate-y-1/2"></div>
+                                    </div>
+                                </div>
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
-        </>
-    );
-};
 
-AiComponent.defaultProps = {};
-export default AiComponent;
+            {/* 背景遮罩 */}
+            {(isPopoverOpen || isChatOpen) && (
+                <div
+                    className="fixed inset-0 bg-black/10 backdrop-blur-sm z-40"
+                    onClick={() => {
+                        setIsPopoverOpen(false)
+                        setIsChatOpen(false)
+                    }}
+                />
+            )}
+        </div>
+    )
+}
+

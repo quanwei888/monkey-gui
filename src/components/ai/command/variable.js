@@ -81,13 +81,13 @@ export class CreateVariableCommand extends Command {
         const inputSelector = ".prompt_variable-name-text-input_TnOzG";
         const input = document.querySelector(inputSelector);
         await Rpa.type(input, varName);
-        await Rpa.wait(1000);
+        await Rpa.wait(100);
 
         // 点击确认按钮
         const okSelector = ".prompt_ok-button_9CK92";
         const ok = document.querySelector(okSelector);
         await Rpa.click(ok);
-        await Rpa.wait(1000);
+        await Rpa.wait(500);
         const varType = this.varType;
         /*
         await this.waitUntil(() => {

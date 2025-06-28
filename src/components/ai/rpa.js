@@ -193,38 +193,6 @@ class Rpa {
         }
     }
 
-    /**
-     * 点击指定元素
-     * @param {string|Element} selector - 要点击的元素或选择器
-     * @returns {Promise<boolean>} - 操作是否成功
-     */
-    async clickXY(x, y) {
-        try {
-            this.block();
-
-            await this.user.click(document.body, {clientX: x, clientY: y});
-            console.log('点击成功');
-
-            this.unblock(); // 操作完成后解除阻止
-            return true;
-        } catch (error) {
-            console.error('点击操作失败:', error);
-            this.unblock(); // 发生错误时也要解除阻止
-            return false;
-        }
-    }
-
-    /**
-     * 模拟多步拖动以使动作更自然
-     * @param {number} startX - 起始X坐标
-     * @param {number} startY - 起始Y坐标
-     * @param {number} endX - 结束X坐标
-     * @param {number} endY - 结束Y坐标
-     * @param {Object} user - 用户对象，包含pointer方法
-     * @param {number} steps - 拖动步数，默认为50
-     * @param {number} delay - 每步延迟时间(毫秒)，默认为10
-     * @returns {Promise<void>}
-     */
     async smoothDrag(element, startX, startY, endX, endY, steps = 50, delay = 10) {
         for (let i = 1; i <= steps; i++) {
             const stepX = startX + ((endX - startX) * i / steps);
@@ -240,13 +208,6 @@ class Rpa {
         }
     }
 
-    /**
-     * 将元素拖动到指定坐标
-     * @param {string|Element} element - 要拖动的元素
-     * @param {number} targetX - 目标 X 坐标
-     * @param {number} targetY - 目标 Y 坐标
-     * @returns {Promise<boolean>} - 操作是否成功
-     */
     async drag(element, targetX, targetY) {
         try {
             this.block();
@@ -291,12 +252,6 @@ class Rpa {
         }
     }
 
-    /**
-     * 输入文本到指定元素
-     * @param {string|Element} selector - 目标元素或选择器
-     * @param {string} text - 要输入的文本
-     * @returns {Promise<boolean>} - 操作是否成功
-     */
     type = async (element, text) => {
         try {
             this.block();
@@ -321,7 +276,7 @@ class Rpa {
 
             // 5. 清空现有内容并输入
             await this.user.clear(element);
-            await this.user.keyboard(text);
+            await this.user.type(element,text);
 
             // 6. 验证输入结果
             if (element.value !== text) {
