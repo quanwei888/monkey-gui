@@ -28,14 +28,18 @@ const AiTestComponent = function (props) {
             audio.play();
         });
     }
+    const wait = async (second) => {
+        return new Promise(resolve => setTimeout(resolve, second));
+    }
+
 
     const playTask = async (message) => {
         for (const cmd of message.cmds) {
-            await executeCop(cmd)
+            await executeCmd(cmd)
         }
     }
 
-    const executeCop = async (cmd_json) => {
+    const executeCmd = async (cmd_json) => {
         var cmd;
         switch (cmd_json.class) {
             case "AddBlockCommand":
@@ -108,6 +112,7 @@ const AiTestComponent = function (props) {
                             data.cmds = []
                         }
                         await processMessage(data);
+                        await wait(1);
                     } catch (e) {
                         console.error("Parse error", e, line);
                     }
