@@ -11,7 +11,7 @@ export default class Command {
         this.vm = vm;
     }
 
-    getVariableDataId(varName, varType) {
+    getVariableDataId = (varName, varType) => {
         var varTypeStr = "" // 默认是变量
         if (varType == "list") {
             varTypeStr = "list";
@@ -27,7 +27,6 @@ export default class Command {
         }
         return null;
     }
-
 
     getElementCoords = (element, relativeToPage = true) => {
         // 如果传入的是字符串ID，获取对应的DOM元素
@@ -61,16 +60,15 @@ export default class Command {
         return [x, y, width, height];
     }
 
-
     /**
      * 命令执行入口，包含参数校验
      */
-    async exec() {
+    exec = async () => {
         this.validateParams();
         await this.execute();
     }
 
-    async sug(...args) {
+    sug = async (...args) => {
         this.validateParams();
         await this.suggest();
     }
@@ -78,7 +76,7 @@ export default class Command {
     /**
      * 参数校验方法，子类需重写
      */
-    validateParams() {
+    validateParams = () => {
         if (!this.vm) {
             throw new Error('VM is required');
         }
@@ -94,15 +92,14 @@ export default class Command {
     /**
      * 具体执行逻辑，子类需重写
      */
-    async suggest() {
+    suggest = async () => {
         console.log("Execute method not implemented");
     }
-
 
     /**
      * 检查指定ID的块是否存在
      */
-    blockExists(blockId) {
+    blockExists = (blockId) => {
         const blocks = this.vm.editingTarget.blocks._blocks;
         return blockId in blocks;
     }
@@ -110,7 +107,7 @@ export default class Command {
     /**
      * 获取脚本DOM元素
      */
-    getScriptEl(id) {
+    getScriptEl = (id) => {
         const selector = id.startsWith("$")
             ? `[data-id$="${id.substring(1)}"]`
             : `[data-id="${id}"]`;
@@ -126,7 +123,7 @@ export default class Command {
     /**
      * 获取块的DOM元素（path元素）
      */
-    getBlockEl(id) {
+    getBlockEl = (id) => {
         const element = this.getScriptEl(id);
         if (!element) return null;
 
@@ -139,7 +136,7 @@ export default class Command {
         return path;
     }
 
-    async _ensureVisible(svgCanvas, bounds, x, y) {
+    _ensureVisible = async (svgCanvas, bounds, x, y) => {
         console.log('Canvas bounds:', bounds);
 
         let targetX = -1;
@@ -162,7 +159,7 @@ export default class Command {
         return true;
     }
 
-    async ensureScriptBlockVisible(x, y) {
+    ensureScriptBlockVisible = async (x, y) => {
         const canvas = document.querySelector('.injectionDiv');
         const rect = canvas.getBoundingClientRect();
 
@@ -176,7 +173,7 @@ export default class Command {
         return this._ensureVisible(svgCanvas, bounds, x, y);
     }
 
-    async ensureToolboxBlockVisible(dataId) {
+    ensureToolboxBlockVisible = async (dataId) => {
         const canvas = document.querySelector('.injectionDiv');
         const rect = canvas.getBoundingClientRect();
 
@@ -192,7 +189,6 @@ export default class Command {
         const svgCanvas = document.querySelector('.blocklyFlyout');
         return this._ensureVisible(svgCanvas, bounds, bbox.x, bbox.y);
     }
-
 }
 
 export const VariableType = {

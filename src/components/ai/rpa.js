@@ -5,7 +5,9 @@ import userEvent from '@testing-library/user-event';
  */
 class Rpa {
     constructor() {
-        this.user = userEvent.setup({delay: 0});
+        this.user = userEvent.setup({delay: 100});
+        this.fast_user = userEvent.setup(); // 默认无延迟
+
         this._unblockFn = null;
     }
 
@@ -93,14 +95,6 @@ class Rpa {
         }
     }
 
-    async centerBlock(element) {
-        // 获取元素的当前位置
-        const elementRect = element.getBoundingClientRect();
-        const elementCenterX = elementRect.x + elementRect.width / 2;
-        const elementCenterY = elementRect.y + elementRect.height / 2;
-        return this.center(elementCenterX, elementCenterY)
-    }
-
     async center(svgCanvas,x, y) {
         this.block();
         //用 div 来计算bbox
@@ -150,29 +144,6 @@ class Rpa {
     }
 
     /**
-     * 通过 data-id 查找元素
-     * @param {string} dataId - 元素的 data-id 属性值
-     * @returns {Element|null} - 找到的元素或 null
-     */
-    findElementByDataId(dataId) {
-        const element = document.querySelector(`[data-id="${dataId}"]`);
-        if (!element) {
-            console.log(`未找到 data-id 为 "${dataId}" 的元素`);
-            return null;
-        }
-
-        // 查找元素内的第一个 path
-        const path = element.querySelector('path');
-        if (!path) {
-            console.log(`在 data-id 为 "${dataId}" 的元素中未找到 path`);
-            return null;
-        }
-
-        return path;
-    }
-
-
-    /**
      * 点击指定元素
      * @param {string|Element} selector - 要点击的元素或选择器
      * @returns {Promise<boolean>} - 操作是否成功
@@ -197,8 +168,7 @@ class Rpa {
         for (let i = 1; i <= steps; i++) {
             const stepX = startX + ((endX - startX) * i / steps);
             const stepY = startY + ((endY - startY) * i / steps);
-
-            await this.user.pointer({
+            await this.fast_user.pointer({
                 target: document.body,
                 coords: {clientX: stepX, clientY: stepY},
             });
@@ -226,7 +196,7 @@ class Rpa {
             console.log(`开始拖动: 从 (${startX}, ${startY}) 到 (${endX}, ${endY})`);
 
             // 执行拖动 - 鼠标按下
-            await this.user.pointer({
+            await this.fast_user.pointer({
                 target: element,
                 keys: '[MouseLeft>]',
                 coords: {clientX: startX, clientY: startY}
@@ -238,7 +208,7 @@ class Rpa {
             await this.smoothDrag(element, 300, endY, endX, endY, 5);
 
             // 鼠标释放
-            await this.user.pointer('[/MouseLeft]');
+            await this.fast_user.pointer('[/MouseLeft]');
 
             console.log(`拖动完成: 到达目标位置 (${endX}, ${endY})`);
 
@@ -376,16 +346,6 @@ class Rpa {
             }
         }, 300);
     }
-
-    isElementFullyInViewport = el => {
-        const rect = el.getBoundingClientRect();
-        return (
-            rect.top >= 0 &&
-            rect.left >= 0 &&
-            rect.bottom <= window.innerHeight &&
-            rect.right <= window.innerWidth
-        );
-    };
 
 }
 

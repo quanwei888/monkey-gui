@@ -16,26 +16,125 @@ const AiTestComponent = function (props) {
         vm,
         ...componentProps
     } = props;
-    console.log(222,Blockly.ScratchMsgs);
-    const handleTest = async () =>{
-        const cmd = new AddBlockCommand(vm);
-        cmd.id="id_23" + Date.now().toString();
-        cmd.dataId = "event_whenbroadcastreceived";
+    console.log(222, Blockly.ScratchMsgs);
+    const hashMatch = window.location.hash.match(/#(.+)/);
+    const projectId = hashMatch ? hashMatch[1] : null;
+
+    const speakTask = async (message) => {
+        return new Promise((resolve, reject) => {
+            const audio = new Audio(`data:audio/wav;base64,${message.audio}`);
+            audio.onended = resolve;      // 播放结束时 resolve
+            audio.onerror = reject;       // 播放出错时 reject
+            audio.play();
+        });
+    }
+
+    const playTask = async (message) => {
+        for (const cmd of message.cmds) {
+            await executeCop(cmd)
+        }
+    }
+
+    const executeCop = async (cmd_json) => {
+        var cmd;
+        switch (cmd_json.class) {
+            case "AddBlockCommand":
+                cmd = new AddBlockCommand(vm);
+                break;
+            case "ConnectBlockCommand":
+                cmd = new ConnectBlockCommand(vm);
+                break;
+            case "InputBlockCommand":
+                cmd = new BlockInputCommand(vm);
+                break;
+            case "TextInputCommand":
+                cmd = new TextInputCommand(vm);
+                break;
+            case "OptionInputCommand":
+                cmd = new OptionInputCommand(vm);
+                break;
+            case "SelectCategoryCommand":
+                cmd = new SelectCategoryCommand(vm);
+                break;
+            case "SelectTargetCommand":
+                cmd = new SelectTargetCommand(vm);
+                break;
+            case "BlockInputCommand":
+                cmd = new BlockInputCommand(vm);
+                break;
+            case "VariableInputCommand":
+                cmd = new VariableInputCommand(vm);
+                break;
+            case "CreateVariableCommand":
+                cmd = new CreateVariableCommand(vm);
+                break;
+        }
+        Object.assign(cmd, cmd_json);
         await cmd.exec();
     }
+
+    const processMessage = async (message) => {
+        var tasks = []
+        if (message.audio) {
+            tasks.push(speakTask(message));
+        }
+        if (message.cmds.length > 0) {
+            tasks.push(playTask(message));
+        }
+        await Promise.all(tasks);
+        console.log(message.text);
+    }
+
+
+    const streamChunks = async (stream) => {
+        try {
+            // 流式读取
+            const reader = stream.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+
+            while (true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, {stream: true});
+                let lines = buffer.split("\n");
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (line.trim() === "") continue;
+                    try {
+                        const data = JSON.parse(line);
+                        if (!("cmds" in data)) {
+                            data.cmds = []
+                        }
+                        await processMessage(data);
+                    } catch (e) {
+                        console.error("Parse error", e, line);
+                    }
+                }
+            }
+        } catch (err) {
+            if (err.name === "AbortError") {
+                console.log("接收已取消");
+            } else {
+                console.log("服务端连接失败");
+            }
+        } finally {
+        }
+    }
+
+    const handleTest = async () => {
+        const response = await fetch(`http://test.xiaomalong.org:3001/study/${projectId}`);
+        await streamChunks(response.body);
+    }
     const handleRemote = async () => {
-        const hashMatch = window.location.hash.match(/#(.+)/);
-        const projectId = hashMatch ? hashMatch[1] : null;
-        // 从 API 获取命令数据
-        const response = await fetch(`http://api.xiaomalong.org:3001/cmd/${projectId}`);
+        const response = await fetch(`http://test.xiaomalong.org:3001/${projectId}/cops`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const cmds = await response.json();
-        //console.log(222,Blockly.Blocks,Blockly.Msg);
-
+        const cmd_jsons = await response.json();
         var cmd = null;
-        for (const cmd_json of cmds) {
+        for (const cmd_json of cmd_jsons) {
             switch (cmd_json.class) {
                 case "AddBlockCommand":
                     cmd = new AddBlockCommand(vm);
