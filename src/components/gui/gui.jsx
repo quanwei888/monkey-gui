@@ -41,7 +41,7 @@ import codeIcon from './icon--code.svg';
 import costumesIcon from './icon--costumes.svg';
 import soundsIcon from './icon--sounds.svg';
 import DebugModal from '../debug-modal/debug-modal.jsx';
-import AiButton from "../../components/ai/ai";
+import Ai from "../ai/components/Ai";
 
 const messages = defineMessages({
     addExtension: {
@@ -327,6 +327,7 @@ const GUIComponent = props => {
                                             theme={theme}
                                             vm={vm}
                                         />
+                                        <Ai vm={vm}/>
                                     </Box>
                                     <Box className={styles.extensionButtonContainer}>
                                         <button
@@ -344,7 +345,7 @@ const GUIComponent = props => {
                                     <Box className={styles.watermark}>
                                         <Watermark />
                                     </Box>
-                                    <AiButton/>
+
                                 </TabPanel>
                                 <TabPanel className={tabClassNames.tabPanel}>
                                     {costumesTabVisible ? <CostumeTab vm={vm} /> : null}

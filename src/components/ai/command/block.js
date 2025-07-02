@@ -1,4 +1,4 @@
-import Rpa from "../rpa";
+import Rpa from '../lib/rpa';
 import Command from "./base";
 
 /**
@@ -116,8 +116,31 @@ export class ConnectBlockCommand extends BlockCommand {
     }
 }
 
+/**
+ * 连接块命令
+ */
+export class RemoveBlockCommand extends BlockCommand {
+    /**
+     * 执行块的拖拽操作
+     */
+    execute = async () => {
+        if (!this.blockExists(this.id)) {
+            return;
+        }
+
+        const domBlock = this.getScriptEl(this.id);
+        await Rpa.click(domBlock, 2);
+        await this.selectLastOption();
+
+        if (this.blockExists(this.id)) {
+            console.log(`Block removal failed for ID: "${this.id}"`);
+        }
+    }
+}
+
 
 var currentCategory = null;
+
 /**
  * 选择分类命令
  */

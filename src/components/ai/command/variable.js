@@ -1,5 +1,5 @@
 import Command from "./base";
-import Rpa from '../rpa';
+import Rpa from '../lib/rpa';
 
 export class CreateVariableCommand extends Command {
     varName = "";

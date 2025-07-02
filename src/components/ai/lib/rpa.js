@@ -31,7 +31,7 @@ class Rpa {
         overlay.style.width = '100%';
         overlay.style.height = '100%';
         overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.01)';
-        overlay.style.zIndex = '99999';
+        overlay.style.zIndex = '999';
         overlay.style.cursor = 'not-allowed';
         document.body.appendChild(overlay);
 
@@ -95,7 +95,7 @@ class Rpa {
         }
     }
 
-    async center(svgCanvas,x, y) {
+    async center(svgCanvas, x, y) {
         this.block();
         //用 div 来计算bbox
         const svgContainer = document.querySelector('.injectionDiv');
@@ -143,16 +143,35 @@ class Rpa {
         this.unblock();
     }
 
+    moveTo = async (element) => {
+
+    }
+
+
     /**
      * 点击指定元素
      * @param {string|Element} selector - 要点击的元素或选择器
      * @returns {Promise<boolean>} - 操作是否成功
      */
-    async click(element) {
+    async click(element, button = 0) {
         try {
             this.block();
 
-            await this.user.click(element);
+            let key = 'MouseLeft'
+            if (button === 2) {
+                key = 'MouseRight'
+            }
+
+            const rect = element.getBoundingClientRect();
+            await this.user.pointer([
+                { target: document.body, coords: { clientX: rect.left + 10, clientY: rect.top+10 } }
+            ]);
+            await this.user.pointer([
+                // touch the screen at element1
+                {keys: `[${key}]`, target: element},
+            ])
+
+            //await this.user.click(element, {button: button});
             console.log('点击成功');
 
             this.unblock(); // 操作完成后解除阻止
@@ -246,7 +265,7 @@ class Rpa {
 
             // 5. 清空现有内容并输入
             await this.user.clear(element);
-            await this.user.type(element,text);
+            await this.user.type(element, text);
 
             // 6. 验证输入结果
             if (element.value !== text) {

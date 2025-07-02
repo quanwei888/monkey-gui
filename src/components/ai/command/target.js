@@ -1,5 +1,5 @@
 import Command from "./base";
-import Rpa from '../rpa';
+import Rpa from '../lib/rpa';
 /**
  * 选择目标命令
  */

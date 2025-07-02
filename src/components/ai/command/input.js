@@ -1,4 +1,4 @@
-import Rpa from "../rpa";
+import Rpa from '../lib/rpa';
 import Command from "./base";
 
 /**
@@ -146,7 +146,7 @@ export class BlockInputCommand extends InputCommand {
                 console.log(`Block input creation failed for ID: "${this.paramValue.id}"`);
             }
         } catch (error) {
-            console.error('BlockInputCommand execute error:', error);
+            console.error('BlockInputCommand process error:', error);
             throw error; // 可根据需要决定是否向上传递
         }
     }
@@ -205,7 +205,7 @@ export class VariableInputCommand extends BlockInputCommand {
             }
             await Rpa.drag(domParamBlock, pos[0], pos[1]);
         } catch (error) {
-            console.error('VariableInputCommand execute error:', error);
+            console.error('VariableInputCommand process error:', error);
         }
     }
 
@@ -232,7 +232,7 @@ export class TextInputCommand extends InputCommand {
             }
 
         } catch (error) {
-            console.error('TextInputCommand execute error:', error);
+            console.error('TextInputCommand process error:', error);
         }
     }
 
@@ -261,22 +261,23 @@ export class OptionInputCommand extends InputCommand {
             const slot = this.getParamBlock(this.id, this.paramName);
             await Rpa.click(slot);
 
-            // 查找并点击对应的选项
-            const options = document.querySelectorAll('.goog-menuitem-content');
-            for (const option of options) {
-                if (option.textContent.trim() === this.paramValue) {
-                    await Rpa.click(option);
-                    return;
-                }
+            //跳过颜色 todo
+            if (this.paramValue.startsWith('#')) {
+                return;
             }
+
+            // 点击选项
+            const succ = await this.selectOption(this.paramValue);
 
             //跳过颜色 todo
             if (this.paramValue.startsWith('#')) {
                 return;
             }
-            throw new Error(`Option "${this.paramValue}" not found`);
+            if (!succ) {
+                throw new Error(`Option "${this.paramValue}" not found`);
+            }
         } catch (error) {
-            console.error('OptionInputCommand execute error:', error);
+            console.error('OptionInputCommand process error:', error);
         }
     }
 

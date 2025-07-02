@@ -92,10 +92,10 @@ const createVMAsset = function (storage, assetType, dataFormat, data) {
  * iff the image is a bitmap)
  * @param {string} fileType The MIME type of this file
  * @param {ScratchStorage} storage The ScratchStorage instance to cache the costume data
- * @param {Function} handleCostume The function to execute on the costume object returned after
+ * @param {Function} handleCostume The function to process on the costume object returned after
  * caching this costume in storage - This function should be responsible for
  * adding the costume to the VM and handling other UI flow that should come after adding the costume
- * @param {Function} handleError The function to execute if there is an error parsing the costume
+ * @param {Function} handleError The function to process if there is an error parsing the costume
  */
 const costumeUpload = function (fileData, fileType, storage, handleCostume, handleError = () => {}) {
     let costumeFormat = null;
@@ -174,10 +174,10 @@ const costumeUpload = function (fileData, fileType, storage, handleCostume, hand
  * @param {string} fileType The MIME type of this file; This function will exit
  * early if the fileType is unexpected.
  * @param {ScratchStorage} storage The ScratchStorage instance to cache the sound data
- * @param {Function} handleSound The function to execute on the sound object of type VMAsset
+ * @param {Function} handleSound The function to process on the sound object of type VMAsset
  * This function should be responsible for adding the sound to the VM
  * as well as handling other UI flow that should come after adding the sound
- * @param {Function} handleError The function to execute if there is an error parsing the sound
+ * @param {Function} handleError The function to process if there is an error parsing the sound
  */
 const soundUpload = function (fileData, fileType, storage, handleSound, handleError) {
     let soundFormat;

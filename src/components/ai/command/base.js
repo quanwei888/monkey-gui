@@ -1,4 +1,4 @@
-import Rpa from '../rpa';
+import Rpa from '../lib/rpa';
 
 /**
  * 基础命令类，所有命令的父类
@@ -188,6 +188,27 @@ export default class Command {
         const bbox = domBlock.getBoundingClientRect();
         const svgCanvas = document.querySelector('.blocklyFlyout');
         return this._ensureVisible(svgCanvas, bounds, bbox.x, bbox.y);
+    }
+
+    selectOption = async (name) => {
+        // 查找并点击对应的选项
+        const options = document.querySelectorAll('.goog-menuitem-content');
+        for (const option of options) {
+            if (option.textContent.trim() === name) {
+                await Rpa.click(option);
+                return true;
+            }
+        }
+        return false;
+    }
+    selectLastOption = async (name) => {
+        // 查找并点击对应的选项
+        const options = document.querySelectorAll('.goog-menuitem-content');
+        if (options.length > 0) {
+            await Rpa.click(options[options.length - 1]);
+            return true;
+        }
+        return false;
     }
 }
 
