@@ -1,22 +1,19 @@
-import React, {useEffect, useState, useRef} from 'react';
-import {PlayIcon, PlayNextIcon, SpeakingIcon, VoiceIcon} from './Icon';
+import React, {useRef, useState} from 'react';
+import {PlayNextIcon} from './Icon';
 import {MessageProcessor} from "../lib/message";
-import audioMgr from "../lib/audio";
 import SpeechToText from "./SpeechToText";
-import api, {fetchQaMessages, fetchStudyMessages} from "../lib/api";
+import api from "../lib/api";
+import audioMgr from "../lib/audio";
 
 const Explore = function (props) {
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [isPlayingNext, setIsPlayingNext] = useState(false);
-    const [isRecording, setIsRecording] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [processor, setProcessor] = useState(new MessageProcessor(props.vm));
-    const [messages, setMessages] = useState([]);
-    const [nextMessageIndex, setNextMessageIndex] = useState(0);
     const {
         vm,
         pid
     } = props;
+
+    // 添加状态来控制输入框的显示
+    const [showInput, setShowInput] = useState(false);
+    const [inputValue, setInputValue] = useState('');
 
     // 创建引用来存储消息队列和处理状态
     const messageQueueRef = useRef([]);
@@ -33,6 +30,7 @@ const Explore = function (props) {
 
         try {
             console.log("Processing message:", message);
+            const processor = new MessageProcessor(vm);
             await processor.process(message);
 
             if (message.done) {
@@ -47,35 +45,10 @@ const Explore = function (props) {
         }
     };
 
-    const playMessage = async () => {
-        if (nextMessageIndex >= messages.length) {
-            return;
-        }
-
-        setIsPlayingNext(true);
-
-        try {
-            if (nextMessageIndex + 1 < messages.length) {
-                audioMgr.getOrFetchAudio(messages[nextMessageIndex].text);
-            }
-            await processor.process(messages[nextMessageIndex]);
-            setNextMessageIndex(nextMessageIndex + 1);
-        } catch (error) {
-            console.error("Error processing message:", error);
-        } finally {
-            setIsPlayingNext(false);
-        }
-    };
-
-    const onTextRecognized = async (text = "test") => {
-        console.log(111, text);
+    const handleStreamMessage = async (question) => {
         try {
             const sb3 = vm.toJSON();
-            const question = "写一个从 1加到 50的程序";
             const sid = await api.submit("qa", {sb3, question});
-
-            console.log("Connecting to SSE with sid:", sid);
-
             const eventSource = new EventSource(`http://test.xiaomalong.org:3001/stream/${sid}`);
 
             // 添加连接成功处理
@@ -88,6 +61,11 @@ const Explore = function (props) {
                 try {
                     const message = JSON.parse(event.data);
                     console.log("Received data:", message);
+
+                    // 预进行TTS
+                    if (!message.done) {
+                        audioMgr.getOrFetchAudio(message.text)
+                    }
 
                     // 将消息添加到队列
                     messageQueueRef.current.push(message);
@@ -115,19 +93,61 @@ const Explore = function (props) {
         }
     };
 
-    if (isLoading) {
-        return <></>
-    }
+    // 处理按钮点击事件
+    const handleButtonClick = () => {
+        setShowInput(true);
+    };
+
+    // 处理输入提交
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (inputValue.trim()) {
+            handleStreamMessage(inputValue);
+            setInputValue('');
+            setShowInput(false);
+        }
+    };
+
+    // 处理取消输入
+    const handleCancel = () => {
+        setShowInput(false);
+        setInputValue('');
+    };
 
     return (
         <div id="ai-group"
              className="z-[9999] absolute right-32 bottom-6 flex flex-row items-center space-x-4 rounded-xl border-2 border-blue-300 bg-white/95 px-4 py-3 shadow-lg backdrop-blur-md transition-all duration-200">
-            <button
-                onClick={onTextRecognized}
-                className={`flex bg-blue-100 text-blue-600 h-12 w-12 items-center justify-center rounded-full transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400`}>
-                <PlayNextIcon/>
-            </button>
-            <SpeechToText onTextRecognized={onTextRecognized}/>
+            {showInput ? (
+                <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+                    <input
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        placeholder="请输入问题..."
+                        className="border border-blue-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        autoFocus
+                    />
+                    <button
+                        type="submit"
+                        className="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition duration-200"
+                    >
+                        发送
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="bg-gray-300 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-400 transition duration-200"
+                    >
+                        取消
+                    </button>
+                </form>
+            ) : (
+                <button
+                    onClick={handleButtonClick}
+                    className={`flex bg-blue-100 text-blue-600 h-12 w-12 items-center justify-center rounded-full transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400`}>
+                    <PlayNextIcon/>
+                </button>
+            )}
         </div>
     );
 };

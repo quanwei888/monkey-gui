@@ -39,10 +39,36 @@ export const VoiceIcon = () => {
 
     );
 };
+export const LoadingIcon = () => {
+    return (
+        <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#3498db" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="#3498db" stop-opacity="0.2"/>
+                </linearGradient>
+            </defs>
+
+            <circle cx="50" cy="50" r="40" stroke="#e0e0e0" stroke-width="8" fill="none"/>
+
+            <circle cx="50" cy="50" r="40" stroke="url(#gradient)" stroke-width="8" fill="none"
+                    stroke-dasharray="80 175">
+                <animateTransform
+                    attributeName="transform"
+                    type="rotate"
+                    from="0 50 50"
+                    to="360 50 50"
+                    dur="1.5s"
+                    repeatCount="indefinite"/>
+            </circle>
+
+        </svg>
+    );
+};
 
 export const RecordingIcon = () => {
     return (
-        <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <svg width="100" height="100" viewBox="0 0 100 100" fill={"currentColor"} xmlns="http://www.w3.org/2000/svg">
             <circle cx="50" cy="50" r="40" fill="#f0f0f0"/>
             <circle cx="50" cy="50" r="15" fill="#ff3b30"/>
             <circle cx="50" cy="50" r="15" fill="#ff3b30" opacity="0.8">

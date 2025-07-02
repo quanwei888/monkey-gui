@@ -7,7 +7,7 @@ const Ai = function (props) {
         vm
     } = props;
     const hashMatch = window.location.hash.match(/#(.+)/);
-    const cols = hashMatch[1].split('/');
+    const cols = hashMatch ? hashMatch[1].split('/') : [];
     if (cols.length != 2) {
         return <></>
     }
