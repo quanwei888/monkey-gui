@@ -164,7 +164,7 @@ export default class Command {
         const rect = canvas.getBoundingClientRect();
 
         const bounds = {
-            minX: 300,
+            minX: rect.x + 300,
             maxX: rect.x + rect.width - 50,
             minY: rect.y + 100,
             maxY: rect.y + rect.height - 200
@@ -178,7 +178,7 @@ export default class Command {
         const rect = canvas.getBoundingClientRect();
 
         const bounds = {
-            minX: 0,
+            minX: rect.x,
             maxX: Infinity,
             minY: rect.y + 100,
             maxY: rect.y + rect.height - 200

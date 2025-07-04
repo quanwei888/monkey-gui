@@ -63,8 +63,13 @@ export class AddBlockCommand extends BlockCommand {
      */
     calcPosition() {
         const scriptIds = this.vm.editingTarget.blocks.getScripts();
+
+        const rectWorkspace = this.getElementCoords(document.querySelector(".injectionDiv"));
+        const rectToolBox = this.getElementCoords(document.querySelector(".blocklyFlyout"));
+        const defaultPos = [rectWorkspace[0] + rectToolBox[2] + 100, 200];
+
         if (scriptIds.length === 0) {
-            return [400, 200];
+            return defaultPos
         }
 
         let minX = Infinity;
@@ -86,8 +91,8 @@ export class AddBlockCommand extends BlockCommand {
                 maxY = bottomY;
             }
         }
-        if (Math.abs(minX - 400) < 20) {
-            minX = 400
+        if (Math.abs(minX - defaultPos[0]) < 20) {
+            minX = defaultPos[0];
         }
         return [minX, maxY + 50];
     }

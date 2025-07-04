@@ -14,16 +14,6 @@ export default {
         return response.data.sid;
     },
 
-    streamResult: async (sid) => {
-        const response = await axios.gr(`${baseUrl}/qa`, {
-            action: action,
-            data: data
-        }, {
-            timeout: timeout
-        });
-        return response.data.sid;
-    }
-
 }
 export const fetchStudyMessages = async (pid) => {
     const response = await axios.get(`${baseUrl}/lecture/${pid}/study`, {

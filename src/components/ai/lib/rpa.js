@@ -188,7 +188,7 @@ class Rpa {
             const stepX = startX + ((endX - startX) * i / steps);
             const stepY = startY + ((endY - startY) * i / steps);
             await this.fast_user.pointer({
-                target: document.body,
+                target: element,
                 coords: {clientX: stepX, clientY: stepY},
             });
 
@@ -196,7 +196,37 @@ class Rpa {
             await new Promise(r => setTimeout(r, delay));
         }
     }
+    getElementCoords = (element, relativeToPage = true) => {
+        // 如果传入的是字符串ID，获取对应的DOM元素
+        if (typeof element === 'string') {
+            element = document.getElementById(element);
+        }
 
+        // 如果找不到元素，返回 [0, 0, 0, 0]
+        if (!element) {
+            console.warn('Element not found');
+            return [0, 0, 0, 0];
+        }
+
+        const rect = element.getBoundingClientRect();
+
+        let x, y;
+
+        if (relativeToPage) {
+            // 相对于整个页面（包括滚动部分）的坐标
+            x = rect.left + window.scrollX;
+            y = rect.top + window.scrollY;
+        } else {
+            // 相对于视口的坐标
+            x = rect.left;
+            y = rect.top;
+        }
+
+        const width = rect.width;
+        const height = rect.height;
+
+        return [x, y, width, height];
+    }
     async drag(element, targetX, targetY) {
         try {
             this.block();
@@ -221,10 +251,12 @@ class Rpa {
                 coords: {clientX: startX, clientY: startY}
             });
 
+            const rectWorkspace = this.getElementCoords(document.querySelector(".injectionDiv"));
+            const rectToolBox = this.getElementCoords(document.querySelector(".blocklyFlyout"));
             // 第一步：先拖动一点
-            await this.smoothDrag(element, startX, startY, 300, startY, 2);
-            await this.smoothDrag(element, 300, startY, 300, endY, 5);
-            await this.smoothDrag(element, 300, endY, endX, endY, 5);
+            await this.smoothDrag(element, startX, startY, rectWorkspace[0] + rectToolBox[2] + 50, startY, 2);
+            await this.smoothDrag(element, rectWorkspace[0] + rectToolBox[2] + 50, startY, rectWorkspace[0] + rectToolBox[2] + 50, endY, 5);
+            await this.smoothDrag(element, rectWorkspace[0] + rectToolBox[2] + 50, endY, endX, endY, 5);
 
             // 鼠标释放
             await this.fast_user.pointer('[/MouseLeft]');

@@ -25,6 +25,10 @@ class AudioManager {
             return this.getAudio(text);
         }
 
+        if (!text) {
+            return null;
+        }
+
         // 从API获取音频
         const audioData = await fetchTextToAudio(text);
         if (audioData) {

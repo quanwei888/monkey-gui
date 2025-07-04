@@ -1,8 +1,11 @@
 import React, {useEffect, useRef, useState} from 'react';
+import {PlayNextIcon} from './Icon';
 import {MessageProcessor} from "../lib/message";
+import api from "../lib/api";
+import audioMgr from "../lib/audio";
 import MessageBar from "./MessageBar";
 
-const Explore = function (props) {
+const Coder = function (props) {
     const {
         vm,
         pid
@@ -15,7 +18,7 @@ const Explore = function (props) {
     const streamQa = async (question) => {
         const sb3 = vm.toJSON();
         const data = {sb3, question}
-        messageProcessor.current.startStreamMessage("qa", data)
+        messageProcessor.current.startStreamMessage("coder", data)
     }
 
     const onSendMessage = (message) => {
@@ -27,4 +30,4 @@ const Explore = function (props) {
     );
 };
 
-export default Explore;
+export default Coder;
