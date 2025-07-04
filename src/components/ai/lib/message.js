@@ -193,13 +193,13 @@ export class MessagePlayer {
      */
     setIsPaused(isPaused) {
         this.isPaused = isPaused;
-        console.log("暂停设置",isPaused);
+        console.log("暂停设置", isPaused);
     }
 
 
     setIsMuted(isMuted) {
         this.isMuted = isMuted;
-        console.log("静音设置",isMuted);
+        console.log("静音设置", isMuted);
     }
 
 
@@ -278,7 +278,7 @@ export class MessagePlayer {
         }
     }
 
-    async loadMessage(action, data, onComplete) {
+    async loadMessage(action, data, onFirstMessageReceived) {
         try {
             const sessionId = await api.submit(action, data);
             const eventSource = new EventSource(`http://test.xiaomalong.org:3001/stream/${sessionId}`);
@@ -296,27 +296,31 @@ export class MessagePlayer {
                         this.addMessage(messageData);
                         this.play();
                     }
+                    if (onFirstMessageReceived) {
+                        onFirstMessageReceived && onFirstMessageReceived();
+                        onFirstMessageReceived = null;
+                    }
 
                     if (messageData.done) {
                         console.log("流处理完成，关闭连接");
-                        onComplete && onComplete();
+                        onFirstMessageReceived && onFirstMessageReceived();
                         eventSource.close();
                     }
                 } catch (error) {
                     console.error("解析事件数据出错:", error);
                     console.log("原始事件数据:", event.data);
-                    onComplete && onComplete();
+                    onFirstMessageReceived && onFirstMessageReceived();
                 }
             };
 
             eventSource.onerror = (error) => {
                 console.error("EventSource错误:", error);
-                onComplete && onComplete();
+                onFirstMessageReceived && onFirstMessageReceived();
                 eventSource.close();
             };
         } catch (error) {
             console.error("loadMessage 错误", error);
-            onComplete && onComplete();
+            onFirstMessageReceived && onFirstMessageReceived();
         }
     }
 }
