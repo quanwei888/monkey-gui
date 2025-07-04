@@ -12,6 +12,7 @@ import {
 } from '../command';
 import audioManager from "./audio";
 import api from "./api";
+import audioMgr from "./audio";
 
 /**
  * 消息基类 - 所有消息类型的基础
@@ -236,6 +237,12 @@ export class MessagePlayer {
             try {
                 if (!this.currentMessageGroup) {
                     this.currentMessageGroup = this.messageGroupQueue.shift();
+                    if (this.messageGroupQueue.length >= 2) {
+                        for (const message of this.messageGroupQueue[1]) {
+                            const audioText = message.text;
+                            audioMgr.getOrFetchAudio(audioText);
+                        }
+                    }
                 }
 
                 if (!this.currentMessageGroup) {
@@ -246,14 +253,14 @@ export class MessagePlayer {
 
                 // 如果有当前消息，处理它
                 const messagePromises = [];
-                for (const message of this.currentMessageGroup) {
-                    if (message instanceof AudioMessage && this.isMuted) {
+                for (const messageGroup of this.currentMessageGroup) {
+                    if (messageGroup instanceof AudioMessage && this.isMuted) {
                         // 如果消息是音频且静音，则跳过
-                        message.isCompleted = true;
+                        messageGroup.isCompleted = true;
                         continue;
                     }
-                    if (!message.isCompleted) {
-                        messagePromises.push(message.play());
+                    if (!messageGroup.isCompleted) {
+                        messagePromises.push(messageGroup.play());
                     }
                 }
                 await Promise.all(messagePromises);
@@ -297,6 +304,7 @@ export class MessagePlayer {
                         this.play();
                     }
                     if (onFirstMessageReceived) {
+                        audioMgr.getOrFetchAudio(messageData.text);
                         onFirstMessageReceived && onFirstMessageReceived();
                         onFirstMessageReceived = null;
                     }
