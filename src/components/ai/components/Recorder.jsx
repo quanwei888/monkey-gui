@@ -130,9 +130,9 @@ const Recorder = ({ onRecordingComplete, disabled }) => {
             <button
                 ref={buttonRef}
                 className={`p-2 rounded-full flex-shrink-0 mr-2 transition-colors duration-200
-                    ${isRecording ? 'bg-red-500 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
+                    ${isRecording ? 'bg-red-500 text-white' : 'bg-blue-500 text-white hover:bg-blue-600' }
                     ${disabled || !supported ? 'opacity-50 cursor-not-allowed' : ''}
-                    w-24 h-24 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300`}
+                    w-10 h-10 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300`}
                 {...handleEvents}
                 disabled={disabled || !supported}
                 type="button"

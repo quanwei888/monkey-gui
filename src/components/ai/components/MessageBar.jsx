@@ -1,12 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { LoadingSpinner, MicIcon, PauseIcon, PlayIcon, SendIcon } from "./Icon";
+import React, {useState, useRef, useEffect} from 'react';
+import {LoadingSpinner, MicIcon, MuteIcon, PauseIcon, PlayIcon, SendIcon} from "./Icon";
 import Recorder from "./Recorder";
 
 // 主消息栏组件
-const MessageBar = ({ onSendMessage, onPlay, onPause }) => {
+const MessageBar = ({onSendMessage, onPlay, onPause}) => {
     const [message, setMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
     const textareaRef = useRef(null);
 
     // 自动调整文本框高度
@@ -55,9 +56,17 @@ const MessageBar = ({ onSendMessage, onPlay, onPause }) => {
         if (isPlaying) {
             onPause && onPause();
         } else {
-            onPlay && onPlay();
+            onPlay && onPlay({isMuted}); // 播放时传递静音状态
         }
         setIsPlaying(!isPlaying);
+    };
+
+    const handleToggleMute = () => {
+        setIsMuted(!isMuted);
+        // 如果当前正在播放，则需要更新播放状态
+        if (isPlaying) {
+            onPlay && onPlay({isMuted: !isMuted});
+        }
     };
 
     const handleRecordingComplete = async (text) => {
@@ -75,13 +84,23 @@ const MessageBar = ({ onSendMessage, onPlay, onPause }) => {
                         ${isPlaying
                             ? 'bg-blue-500 text-white'
                             : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
-                        w-10 h-10 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300`}
+                        w-10 h-10 flex items-center justify-center `}
                         type="button"
                         title={isPlaying ? "暂停音频" : "播放音频"}
                         onClick={handlePlayAudio}
                     >
                         {isPlaying ? <PauseIcon/> : <PlayIcon/>}
                     </button>}
+
+                <button
+                    className={`p-2 rounded-full flex-shrink-0 mr-2 transition-colors duration-200 bg-gray-100 hover:bg-gray-200 text-gray-600
+                        w-10 h-10 flex items-center justify-center `}
+                    type="button"
+                    title={isMuted ? "取消静音" : "静音"}
+                    onClick={handleToggleMute}
+                >
+                    <MuteIcon isMuted={isMuted}/>
+                </button>
 
                 {/* 录音按钮组件 */}
                 <Recorder
@@ -109,11 +128,11 @@ const MessageBar = ({ onSendMessage, onPlay, onPause }) => {
 
                 <button
                     className={`p-2 ml-2 rounded-full flex-shrink-0 flex items-center justify-center
-                        transition-colors duration-200 w-10 h-10 focus:outline-none focus:ring-2 focus:ring-offset-2
+                        transition-colors duration-200 w-10 h-10 focus:outline-none
                         ${isSending
                         ? 'bg-blue-400 text-white cursor-not-allowed'
                         : message.trim()
-                            ? 'bg-blue-500 hover:bg-blue-600 text-white focus:ring-blue-300'
+                            ? 'bg-blue-500 hover:bg-blue-600 text-white'
                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                     onClick={() => handleSendMessage()}
@@ -126,5 +145,6 @@ const MessageBar = ({ onSendMessage, onPlay, onPause }) => {
         </div>
     );
 };
+
 
 export default MessageBar;
