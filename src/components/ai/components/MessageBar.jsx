@@ -1,22 +1,11 @@
-import React, {useState, useRef, useEffect} from 'react';
-import {LoadingSpinner, MicIcon, MuteIcon, PauseIcon, PlayIcon, SendIcon} from "./Icon";
+import React, {useState, useRef} from 'react';
+import {LoadingSpinner, MicIcon, MuteIcon, PauseIcon, PlayIcon, SendIcon, SpeakingIcon} from "./Icon";
 import Recorder from "./Recorder";
 
 // 主消息栏组件
-const MessageBar = ({onSendMessage, onPlay, onPause}) => {
+const MessageBar = ({onSendMessage, onPlayChange, onMuteChange, isPlaying, isMuted, isReady}) => {
     const [message, setMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
-    const textareaRef = useRef(null);
-
-    // 自动调整文本框高度
-    useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
-        }
-    }, [message]);
 
     const handleInputChange = (e) => {
         setMessage(e.target.value);
@@ -52,21 +41,12 @@ const MessageBar = ({onSendMessage, onPlay, onPause}) => {
         }
     };
 
-    const handlePlayAudio = () => {
-        if (isPlaying) {
-            onPause && onPause();
-        } else {
-            onPlay && onPlay({isMuted}); // 播放时传递静音状态
-        }
-        setIsPlaying(!isPlaying);
+    const handleTogglePlay = () => {
+        onPlayChange && onPlayChange();
     };
 
     const handleToggleMute = () => {
-        setIsMuted(!isMuted);
-        // 如果当前正在播放，则需要更新播放状态
-        if (isPlaying) {
-            onPlay && onPlay({isMuted: !isMuted});
-        }
+        onMuteChange && onMuteChange();
     };
 
     const handleRecordingComplete = async (text) => {
@@ -76,31 +56,37 @@ const MessageBar = ({onSendMessage, onPlay, onPause}) => {
     return (
         <div className="w-full min-w-[500px] bg-white border-t border-gray-200 p-2 shadow-lg">
             {/* 消息输入区域 */}
-            <div className="flex items-center">
+            <div className="flex items-center h-10">
                 {/* 播放/暂停按钮 */}
-                {onPlay &&
-                    <button
-                        className={`p-2 rounded-full flex-shrink-0 mr-2 transition-colors duration-200
+                {isReady && onPlayChange &&
+                    <>
+                        <button
+                            className={`p-2 rounded-full flex-shrink-0 mr-1 transition-colors duration-200
                         ${isPlaying
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
                         w-10 h-10 flex items-center justify-center `}
-                        type="button"
-                        title={isPlaying ? "暂停音频" : "播放音频"}
-                        onClick={handlePlayAudio}
-                    >
-                        {isPlaying ? <PauseIcon/> : <PlayIcon/>}
-                    </button>}
+                            type="button"
+                            title={isPlaying ? "暂停音频" : "播放音频"}
+                            onClick={handleTogglePlay}
+                        >
+                            {isPlaying ? <SpeakingIcon/> : <PlayIcon/>}
+                        </button>
 
-                <button
-                    className={`p-2 rounded-full flex-shrink-0 mr-2 transition-colors duration-200 bg-gray-100 hover:bg-gray-200 text-gray-600
+                        <button
+                            className={`p-2 rounded-full flex-shrink-0 transition-colors duration-200 bg-gray-100 hover:bg-gray-200 text-gray-600
                         w-10 h-10 flex items-center justify-center `}
-                    type="button"
-                    title={isMuted ? "取消静音" : "静音"}
-                    onClick={handleToggleMute}
-                >
-                    <MuteIcon isMuted={isMuted}/>
-                </button>
+                            type="button"
+                            title={isMuted ? "取消静音" : "静音"}
+                            onClick={handleToggleMute}
+                        >
+                            <MuteIcon isMuted={isMuted}/>
+                        </button>
+
+                        {/* 添加分割竖线 */}
+                        <div className="h-6 w-px bg-gray-300 mx-3 flex-shrink-0"></div>
+                    </>
+                }
 
                 {/* 录音按钮组件 */}
                 <Recorder
@@ -109,20 +95,17 @@ const MessageBar = ({onSendMessage, onPlay, onPause}) => {
                 />
 
                 <div className="flex-grow relative">
-                    <textarea
-                        ref={textareaRef}
+                    <input
+                        type="text"
                         value={message}
                         onChange={handleInputChange}
                         onKeyDown={handleKeyDown}
                         placeholder="输入消息或按住麦克风说话"
-                        rows="1"
                         disabled={isSending}
-                        className={`w-full p-2 border border-gray-300 rounded-2xl
-                            focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none overflow-hidden
+                        className={`w-full h-10 px-3 py-2 border border-gray-300 rounded-2xl
+                            focus:outline-none focus:ring-2 focus:ring-blue-300
                             transition-colors duration-200
-                            ${isSending ? 'bg-gray-100 text-gray-500' : ''}
-                            min-h-[40px] max-h-[150px]`}
-                        style={{minHeight: '40px', maxHeight: '150px'}}
+                            ${isSending ? 'bg-gray-100 text-gray-500' : ''}`}
                     />
                 </div>
 
@@ -145,6 +128,5 @@ const MessageBar = ({onSendMessage, onPlay, onPause}) => {
         </div>
     );
 };
-
 
 export default MessageBar;

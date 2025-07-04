@@ -7,256 +7,316 @@ import {
     OptionInputCommand,
     SelectCategoryCommand,
     SelectTargetCommand,
-    VariableInputCommand, RemoveBlockCommand
+    VariableInputCommand,
+    RemoveBlockCommand
 } from '../command';
-import audioMgr from "./audio";
+import audioManager from "./audio";
 import api from "./api";
 
 /**
- * 消息处理类 - 负责执行指令和处理单条消息
+ * 消息基类 - 所有消息类型的基础
  */
-export class MessageProcessor {
+export class Message {
+    constructor(data = {}) {
+        this.id = data.id || Date.now().toString();
+        this.isCompleted = false; // 标记消息是否完成
+        this.hasError = false; // 是否出错
+    }
+
+    async play() {
+        throw new Error('子类必须实现play方法');
+    }
+}
+
+export class AudioMessage extends Message {
+    constructor(data = {}) {
+        super(data);
+        this.audio = null;// 音频对象
+        this.audioData = null;// 音频数据，可以是base64编码的字符串或Blob对象等
+        this.text = data.text; // 可选，用于获取音频
+    }
+
+    /**
+     * 播放音频消息，返回一个Promise，在音频播放完成或暂停时解决
+     * @returns {Promise} - 音频播放完成或出错时解决的Promise
+     */
+    async play() {
+        // 如果已经完成，直接返回
+        if (this.isCompleted) {
+            return;
+        }
+
+        try {
+            // 首次播放时，初始化
+            if (this.audio === null) {
+                // 如果没有音频数据但有文本，获取音频
+                if (!this.audioData && this.text) {
+                    try {
+                        this.audioData = await audioManager.getOrFetchAudio(this.text);
+                    } catch (error) {
+                        this.isCompleted = true;
+                        this.hasError = true;
+                        return;
+                    }
+                }
+
+                if (!this.audioData) {
+                    this.isCompleted = true;
+                    return;
+                }
+
+                this.audio = new Audio(`data:audio/wav;base64,${this.audioData}`);
+
+                // 设置音频事件监听器
+                this.audio.onended = () => {
+                    this.isCompleted = true;
+                };
+
+                this.audio.onerror = () => {
+                    this.hasError = true;
+                    this.isCompleted = true;
+                };
+            }
+
+            // 开始播放
+            await this.audio.play();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            this.audio.pause();
+        } catch (error) {
+            this.hasError = true;
+            this.isCompleted = true;
+        }
+    }
+}
+
+const CommandMap = {
+    AddBlockCommand,
+    ConnectBlockCommand,
+    BlockInputCommand,
+    TextInputCommand,
+    OptionInputCommand,
+    SelectCategoryCommand,
+    SelectTargetCommand,
+    VariableInputCommand,
+    CreateVariableCommand,
+    RemoveBlockCommand,
+};
+
+/**
+ * 命令消息 - 处理命令执行
+ */
+export class CommandMessage extends Message {
+    constructor(data = {}) {
+        super(data);
+        this.cmds = data.cmds || [];
+        this.currentCmdIndex = 0;
+    }
+
+    async play() {
+        if (!this.cmds || this.cmds.length === 0) {
+            this.isCompleted = true;
+            return;
+        }
+
+        // 如果已经完成，直接返回
+        if (this.isCompleted) {
+            return;
+        }
+
+        // 执行当前命令
+        if (this.currentCmdIndex >= this.cmds.length) {
+            return;
+        }
+
+        const command = this.cmds[this.currentCmdIndex];
+        const commandId = command.id || '未知ID';
+        console.log(`执行命令: ${commandId} (${this.currentCmdIndex + 1}/${this.cmds.length})`);
+
+        try {
+            await command.execute();
+        } catch (error) {
+            this.hasError = true;
+            this.isCompleted = true;
+        } finally {
+            this.currentCmdIndex++;
+            if (this.currentCmdIndex >= this.cmds.length) {
+                this.isCompleted = true;
+            }
+        }
+    }
+}
+
+/**
+ * 消息工厂 - 创建不同类型的消息
+ */
+export class MessageFactory {
+    static createMessage(vm, messageData) {
+        const messageGroup = []
+        if (messageData.text) {
+            messageGroup.push(new AudioMessage({text: messageData.text}));
+        }
+        if (messageData.cmds) {
+            const cmds = []
+            for (const commandSpec of messageData.cmds) {
+                const cmdClass = CommandMap[commandSpec.class];
+                const command = new cmdClass(vm);
+                Object.assign(command, commandSpec);
+                cmds.push(command)
+            }
+            messageGroup.push(new CommandMessage({cmds}));
+        }
+        return messageGroup;
+    }
+}
+
+/**
+ * 消息处理类 - 负责执行指令和处理消息流
+ */
+export class MessagePlayer {
     /**
      * 创建消息处理器实例
      * @param {Object} vm - 虚拟机实例
      */
-    constructor(vm) {
-        this.vm = vm;
-        this.currentAudio = null;
-        this.isProcessing = false;
-        this.isPaused = false;
-        this.muted = false;
-        this.commandMap = {
-            "AddBlockCommand": AddBlockCommand,
-            "ConnectBlockCommand": ConnectBlockCommand,
-            "BlockInputCommand": BlockInputCommand,
-            "TextInputCommand": TextInputCommand,
-            "OptionInputCommand": OptionInputCommand,
-            "SelectCategoryCommand": SelectCategoryCommand,
-            "SelectTargetCommand": SelectTargetCommand,
-            "VariableInputCommand": VariableInputCommand,
-            "CreateVariableCommand": CreateVariableCommand,
-            "InputBlockCommand": BlockInputCommand,
-            "RemoveBlockCommand": RemoveBlockCommand,
-        };
-        this.messageQueue = [];
-    }
-
-    pause = () => {
+    constructor(data) {
+        this.vm = data.vm;
         this.isPaused = true;
-    }
-    resume = () => {
-        this.isPaused = false;
-        this.processNext();
-    }
+        this.isMuted = false;
+        this.isProcessing = false;
+        this.messageGroupQueue = [];
+        this.currentMessageGroup = null;
+        this.onMessagePlayedCompleted = data.onMessagePlayedCompleted;
 
-    addMessage = (msg) => {
-        this.messageQueue.push(msg);
     }
 
     /**
-     * 重置处理状态
+     * 暂停消息处理
      */
-    reset = () => {
-        if (this.currentAudio) {
-            this.currentAudio.pause();
-            this.currentAudio = null;
-        }
+    setIsPaused(isPaused) {
+        this.isPaused = isPaused;
+        console.log("暂停设置",isPaused);
+    }
+
+
+    setIsMuted(isMuted) {
+        this.isMuted = isMuted;
+        console.log("静音设置",isMuted);
+    }
+
+
+    /**
+     * 添加消息到队列
+     * @param {Object} messageData - 要添加的消息数据
+     */
+    addMessage(messageData) {
+        const messageGroup = MessageFactory.createMessage(this.vm, messageData);
+        this.messageGroupQueue.push(messageGroup);
     }
 
     /**
-     * 创建并执行单个命令
-     * @param {Object} cmdSpec - 命令规格说明
-     * @returns {Promise} - 命令执行完成的Promise
+     * 重置处理状态，停止当前音频
      */
-    executeCommand = async (cmdSpec) => {
-        const CommandClass = this.commandMap[cmdSpec.class];
-
-        if (!CommandClass) {
-            console.error(`未知命令类型: ${cmdSpec.class}`);
-            return;
-        }
-
-        const command = new CommandClass(this.vm);
-        Object.assign(command, cmdSpec);
-
-        try {
-            await command.exec();
-        } catch (error) {
-            console.error(`执行命令失败: ${cmdSpec.class}`, error);
-            throw error;
-        }
+    reset() {
+        this.isPaused = true;
+        this.isMuted = false;
+        this.messageGroupQueue = [];
+        this.currentMessageGroup = null;
+        this.isProcessing = false;
     }
 
-    /**
-     * 播放音频
-     * @param {string} audioData - Base64编码的音频数据
-     * @returns {Promise} - 音频播放的Promise
-     */
-    playAudio = (audioData) => {
-        if (this.muted) {
-            return Promise.resolve();
-        }
-
-        if (!audioData) {
-            return Promise.resolve();
-        }
-
-        return new Promise((resolve, reject) => {
-            const audio = new Audio(`data:audio/wav;base64,${audioData}`);
-            this.currentAudio = audio;
-
-            audio.onended = () => {
-                this.currentAudio = null;
-                resolve();
-            };
-
-            audio.onerror = (error) => {
-                this.currentAudio = null;
-                reject(error);
-            };
-
-            audio.play();
-        });
-    }
-
-    /**
-     * 处理消息
-     * @param {Object} message - 要处理的消息
-     * @returns {Promise<boolean>} - 消息处理完成后的Promise，完成返回true
-     */
-    process = async (message) => {
-        // 如果没有消息，则不执行任何操作
-        if (!message) {
-            return true;
-        }
-
-        // 确保重置之前的状态
-        this.reset();
-
-        try {
-            // 如果消息没有音频但有文本，尝试从API获取音频
-            let audioData = message.audio;
-            if (!audioData && message.text) {
-                console.log("消息没有音频，正在从API获取...");
-                try {
-                    audioData = await audioMgr.getOrFetchAudio(message.text);
-                } catch (error) {
-                    console.error("从API获取音频失败:", error);
-                }
+    async play() {
+        // 使用while循环替代递归
+        while (true) {
+            // 如果暂停或正在处理中，直接返回
+            if (this.isPaused || this.isProcessing) {
+                return;
             }
 
-            // 启动音频播放
-            const audioPromise = audioData ? this.playAudio(audioData) : Promise.resolve();
-
-            // 处理所有命令
-            const cmdsPromise = (async () => {
-                if (message.cmds && message.cmds.length > 0) {
-                    for (let i = 0; i < message.cmds.length; i++) {
-                        const cmd = message.cmds[i];
-                        const cmdId = cmd.id || '未知ID';
-                        console.log(`执行命令: ${cmdId} (${i + 1}/${message.cmds.length})`);
-                        await this.executeCommand(cmd);
-                    }
-                }
-            })();
-
-            // 同时等待音频和命令执行完成
-            await Promise.all([audioPromise, cmdsPromise]);
-
-            // 显示消息文本
-            if (message.text) {
-                console.log("消息文本:", message.text);
-            }
-
-            console.log("消息处理完成");
-            return true;
-
-        } catch (error) {
-            console.error("处理消息时发生错误:", error);
-            throw error;
-        }
-    }
-
-    processNext = async () => {
-        if (this.isPaused) {
-            return;
-        }
-
-        // 如果已经在处理中，直接返回
-        if (this.isProcessing) {
-            return;
-        }
-
-        // 队列为空则返回
-        if (this.messageQueue.length === 0) {
-            return;
-        }
-
-        try {
             this.isProcessing = true;
 
-            // 只处理队列中的第一条消息，而不是全部
-            const message = this.messageQueue.shift();
-
-            if (message.done) {
-                console.log("Stream completed");
-            }
-            console.log("Processing message:", message);
-
             try {
-                if (this.messageQueue.length > 0) {
-                    audioMgr.getOrFetchAudio(this.messageQueue[0].text)
+                if (!this.currentMessageGroup) {
+                    this.currentMessageGroup = this.messageGroupQueue.shift();
                 }
-                await this.process(message);
+
+                if (!this.currentMessageGroup) {
+                    this.isProcessing = false;
+                    this.onMessagePlayedCompleted && this.onMessagePlayedCompleted();
+                    return;
+                }
+
+                // 如果有当前消息，处理它
+                const messagePromises = [];
+                for (const message of this.currentMessageGroup) {
+                    if (message instanceof AudioMessage && this.isMuted) {
+                        // 如果消息是音频且静音，则跳过
+                        message.isCompleted = true;
+                        continue;
+                    }
+                    if (!message.isCompleted) {
+                        messagePromises.push(message.play());
+                    }
+                }
+                await Promise.all(messagePromises);
+
+                let completed = true;
+                for (const message of this.currentMessageGroup) {
+                    completed = completed && message.isCompleted;
+                }
+
+                if (completed) {
+                    this.currentMessageGroup = null;
+                }
+
+                this.isProcessing = false;
+
             } catch (error) {
-                console.error("Error processing message:", error);
-                throw error;
+                console.error("消息处理失败:", error);
+                this.currentMessageGroup = null;
+                this.isProcessing = false;
+                // 发生错误后继续循环处理下一个消息组
             }
-        } finally {
-            this.isProcessing = false;
-            this.processNext();
         }
     }
 
-    startStreamMessage = async (action, data) => {
+    async loadMessage(action, data, onComplete) {
         try {
-            const sid = await api.submit(action, data);
-            const eventSource = new EventSource(`http://test.xiaomalong.org:3001/stream/${sid}`);
+            const sessionId = await api.submit(action, data);
+            const eventSource = new EventSource(`http://test.xiaomalong.org:3001/stream/${sessionId}`);
 
-            // 添加连接成功处理
             eventSource.onopen = () => {
-                console.log("SSE connection established");
+                console.log("SSE连接已建立");
             };
 
-            // 处理消息
             eventSource.onmessage = (event) => {
                 try {
-                    const message = JSON.parse(event.data);
-                    console.log("Received data:", message);
-                    this.addMessage(message);
-                    // 只有当当前没有正在处理的消息时，才启动处理
-                    if (!this.isProcessing) {
-                        this.processNext();
+                    const messageData = JSON.parse(event.data);
+                    console.log("接收数据:", messageData);
+
+                    if (!messageData.done) {
+                        this.addMessage(messageData);
+                        this.play();
                     }
-                    if (message.done) {
-                        console.log("Stream completed, closing connection");
+
+                    if (messageData.done) {
+                        console.log("流处理完成，关闭连接");
+                        onComplete && onComplete();
                         eventSource.close();
                     }
-                } catch (e) {
-                    console.error("Error parsing event data:", e);
-                    console.log("Raw event data:", event.data);
+                } catch (error) {
+                    console.error("解析事件数据出错:", error);
+                    console.log("原始事件数据:", event.data);
+                    onComplete && onComplete();
                 }
             };
 
-            // 添加错误处理
             eventSource.onerror = (error) => {
-                console.error("EventSource error:", error);
+                console.error("EventSource错误:", error);
+                onComplete && onComplete();
                 eventSource.close();
             };
         } catch (error) {
-            console.error("Error in text recognition process:", error);
+            console.error("loadMessage 错误", error);
+            onComplete && onComplete();
         }
-    };
+    }
 }
-

@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {MessageProcessor} from "../lib/message";
+import {MessagePlayer} from "../lib/message";
 import MessageBar from "./MessageBar";
 
 const Explore = function (props) {
@@ -11,7 +11,7 @@ const Explore = function (props) {
         console.log("pid changed to:", pid);
     }, [pid]);
 
-    const messageProcessor = useRef(new MessageProcessor(vm));
+    const messageProcessor = useRef(new MessagePlayer(vm));
     const streamQa = async (question) => {
         const sb3 = vm.toJSON();
         const data = {sb3, question}

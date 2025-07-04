@@ -1,13 +1,13 @@
 import React, {useEffect, useState} from 'react';
 import {PlayIcon, PlayNextIcon, LoadingIcon, VoiceIcon} from './Icon';
-import {MessageProcessor} from "../lib/message";
+import {MessagePlayer} from "../lib/message";
 import audioMgr from "../lib/audio";
 
 const AiTutor = function (props) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPlayingNext, setIsPlayingNext] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [processor, setProcessor] = useState(new MessageProcessor(props.vm));
+    const [processor, setProcessor] = useState(new MessagePlayer(props.vm));
     const [messages, setMessages] = useState([]);
     const [nextMessageIndex, setNextMessageIndex] = useState(0);
     const {

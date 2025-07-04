@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {MessageProcessor} from "../lib/message";
+import {MessagePlayer} from "../lib/message";
 import MessageBar from "./MessageBar";
 
 const Lecture = function (props) {
@@ -8,38 +8,57 @@ const Lecture = function (props) {
         pid
     } = props;
 
+    const mainProcessor = useRef(new MessagePlayer({vm}));
+    const qaProcessor = useRef(new MessagePlayer({vm}));
+    const [isMuted, setIsMuted] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isReady, setIsReady] = useState(false);
+
     // 添加一个 useEffect 来监听 pid 的变化
     useEffect(() => {
         console.log("pid changed to:", pid);
+        loadStudyMessage();
     }, [pid]); // 依赖项包含 pid，当 pid 变化时触发
-    const mainProcessor = useRef(new MessageProcessor(vm));
-    const qaProcessor = useRef(new MessageProcessor(vm));
-    const streamQa = async (question) => {
+
+    const loadStudyMessage = () => {
+        const data = {pid}
+        mainProcessor.current.onMessagePlayedCompleted = () => {
+            setIsPlaying(false);
+        }
+        mainProcessor.current.setIsPaused(true);//只加载不播放
+        mainProcessor.current.loadMessage("study", data, () => {
+            setIsReady(true);
+        });
+    }
+
+    const onSendMessage = async (question) => {
         const sb3 = vm.toJSON();
         const data = {sb3, question}
-        qaProcessor.current.startStreamMessage("qa", data)
-    }
-    const onSendMessage = async (msg) => {
-        streamQa(msg);
+        qaProcessor.current.setIsPaused(false);
+        qaProcessor.current.loadMessage("qa", data)
     };
-    const onPlay = async () => {
-        const data = {pid}
-        mainProcessor.current.muted = true;
-        if (mainProcessor.current.messageQueue.length > 0) {
-            mainProcessor.current.resume();
-        } else {
-            mainProcessor.current.startStreamMessage("study", data)
-        }
+
+    const onMuteChange = async () => {
+        mainProcessor.current.setIsMuted(!isMuted);
+        setIsMuted(!isMuted);
     }
-    const onPause = async () => {
-        console.log("pause")
-        mainProcessor.current.pause();
+    const onPlayChange = () => {
+        if (isPlaying) {
+            mainProcessor.current.setIsPaused(true);
+            console.log("暂停")
+        } else {
+            mainProcessor.current.setIsPaused(false);
+            mainProcessor.current.play();
+            console.log("播放")
+        }
+        setIsPlaying(!isPlaying);
     }
 
 
     return (
         <div className={""}>
-            <MessageBar onSendMessage={onSendMessage} onPlay={onPlay} onPause={onPause}/>
+            <MessageBar onSendMessage={onSendMessage} onPlayChange={onPlayChange} onMuteChange={onMuteChange}
+                        isMuted={isMuted} isPlaying={isPlaying} isReady={isReady}/>
         </div>
     );
 };
