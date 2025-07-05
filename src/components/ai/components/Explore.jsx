@@ -7,23 +7,36 @@ const Explore = function (props) {
         vm,
         pid
     } = props;
+
+    const qaPlayer = useRef(new MessagePlayer({vm}));
+    const [isReady, setIsReady] = useState(false);
+
+    // 添加一个 useEffect 来监听 pid 的变化
     useEffect(() => {
         console.log("pid changed to:", pid);
-    }, [pid]);
+        qaPlayer.current.reset();
+        setIsReady(false);
+    }, [pid]); // 依赖项包含 pid，当 pid 变化时触发
 
-    const messageProcessor = useRef(new MessagePlayer(vm));
-    const streamQa = async (question) => {
+
+    const onSendMessage = async (question) => {
         const sb3 = vm.toJSON();
         const data = {sb3, question}
-        messageProcessor.current.startStreamMessage("qa", data)
-    }
+        qaPlayer.current.setIsPaused(false);
+        qaPlayer.current.loadMessage("qa", data)
 
-    const onSendMessage = (message) => {
-        streamQa(message);
-    }
+        const message = {
+            "text":"老师收到你的问题，我很快为你解答，请稍等...",
+            "cmds":[]
+        }
+        qaPlayer.current.addMessage(message);
+    };
+
 
     return (
-        <MessageBar onSendMessage={onSendMessage}/>
+        <div className={""}>
+            <MessageBar onSendMessage={onSendMessage}/>
+        </div>
     );
 };
 

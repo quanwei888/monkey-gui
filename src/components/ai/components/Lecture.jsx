@@ -8,8 +8,8 @@ const Lecture = function (props) {
         pid
     } = props;
 
-    const mainProcessor = useRef(new MessagePlayer({vm}));
-    const qaProcessor = useRef(new MessagePlayer({vm}));
+    const mainPlayer = useRef(new MessagePlayer({vm}));
+    const qaPlayer = useRef(new MessagePlayer({vm}));
     const [isMuted, setIsMuted] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isReady, setIsReady] = useState(false);
@@ -17,16 +17,20 @@ const Lecture = function (props) {
     // 添加一个 useEffect 来监听 pid 的变化
     useEffect(() => {
         console.log("pid changed to:", pid);
+        mainPlayer.current.reset();
+        qaPlayer.current.reset();
+        setIsPlaying(false);
+        setIsReady(false);
         loadStudyMessage();
     }, [pid]); // 依赖项包含 pid，当 pid 变化时触发
 
     const loadStudyMessage = () => {
         const data = {pid}
-        mainProcessor.current.onMessagePlayedCompleted = () => {
+        mainPlayer.current.onMessagePlayedCompleted = () => {
             setIsPlaying(false);
         }
-        mainProcessor.current.setIsPaused(true);//只加载不播放
-        mainProcessor.current.loadMessage("study", data, () => {
+        mainPlayer.current.setIsPaused(true);//只加载不播放
+        mainPlayer.current.loadMessage("study", data, () => {
             setIsReady(true);
         });
     }
@@ -34,21 +38,27 @@ const Lecture = function (props) {
     const onSendMessage = async (question) => {
         const sb3 = vm.toJSON();
         const data = {sb3, question}
-        qaProcessor.current.setIsPaused(false);
-        qaProcessor.current.loadMessage("qa", data)
+        qaPlayer.current.setIsPaused(false);
+        qaPlayer.current.loadMessage("qa", data)
+
+        const message = {
+            "text":"老师收到你的问题，我很快为你解答，请稍等...",
+            "cmds":[]
+        }
+        qaPlayer.current.addMessage(message);
     };
 
     const onMuteChange = async () => {
-        mainProcessor.current.setIsMuted(!isMuted);
+        mainPlayer.current.setIsMuted(!isMuted);
         setIsMuted(!isMuted);
     }
     const onPlayChange = () => {
         if (isPlaying) {
-            mainProcessor.current.setIsPaused(true);
+            mainPlayer.current.setIsPaused(true);
             console.log("暂停")
         } else {
-            mainProcessor.current.setIsPaused(false);
-            mainProcessor.current.play();
+            mainPlayer.current.setIsPaused(false);
+            mainPlayer.current.play();
             console.log("播放")
         }
         setIsPlaying(!isPlaying);

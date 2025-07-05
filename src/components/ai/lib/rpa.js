@@ -298,6 +298,8 @@ class Rpa {
             // 5. 清空现有内容并输入
             await this.user.clear(element);
             await this.user.type(element, text);
+            element.value = text;
+            await this.user.keyboard('{Escape}');
 
             // 6. 验证输入结果
             if (element.value !== text) {

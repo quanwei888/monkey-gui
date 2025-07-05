@@ -228,7 +228,6 @@ export class TextInputCommand extends InputCommand {
             const input = document.querySelector('.blocklyHtmlInput');
             if (input.value.trim() !== this.paramValue.trim()) {
                 await Rpa.type(input, this.paramValue.toString());
-                input.value = this.paramValue;
             }
 
         } catch (error) {
