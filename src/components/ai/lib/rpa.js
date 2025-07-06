@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
  */
 class Rpa {
     constructor() {
-        this.user = userEvent.setup({delay: 0});
+        this.user = userEvent.setup({delay: 100});
         this.fast_user = userEvent.setup(); // 默认无延迟
 
         this._unblockFn = null;
@@ -183,7 +183,7 @@ class Rpa {
         }
     }
 
-    async smoothDrag(element, startX, startY, endX, endY, steps = 50, delay = 10) {
+    async smoothDrag(element, startX, startY, endX, endY, steps = 10, delay = 10) {
         for (let i = 1; i <= steps; i++) {
             const stepX = startX + ((endX - startX) * i / steps);
             const stepY = startY + ((endY - startY) * i / steps);
@@ -254,8 +254,7 @@ class Rpa {
             const rectWorkspace = this.getElementCoords(document.querySelector(".injectionDiv"));
             const rectToolBox = this.getElementCoords(document.querySelector(".blocklyFlyout"));
             // 第一步：先拖动一点
-            await this.smoothDrag(element, startX, startY, rectWorkspace[0] + rectToolBox[2] + 50, startY, 2);
-            await this.smoothDrag(element, rectWorkspace[0] + rectToolBox[2] + 50, startY, rectWorkspace[0] + rectToolBox[2] + 50, endY, 5);
+            await this.smoothDrag(element, startX, startY, rectWorkspace[0] + rectToolBox[2] + 50, endY, 20);
             await this.smoothDrag(element, rectWorkspace[0] + rectToolBox[2] + 50, endY, endX, endY, 5);
 
             // 鼠标释放
@@ -345,59 +344,124 @@ class Rpa {
         this.highlightElement(el);
     }
 
-    highlightElement(element) {
+    async highlightElement(element) {
         if (!(element instanceof Element)) return;
 
-        // 移除旧的高亮遮罩（如果存在）
-        const oldMask = document.getElementById('__highlight-mask');
-        if (oldMask) oldMask.remove();
+        // 移除旧的高亮标记（如果存在）
+        const oldMarker = document.getElementById('__highlight-marker');
+        if (oldMarker) oldMarker.remove();
 
         const rect = element.getBoundingClientRect();
-        const padding = 3;
 
-        const mask = document.createElement('div');
-        mask.id = '__highlight-mask';
-        mask.style.position = 'fixed';
-        mask.style.top = `${rect.top + window.scrollY - padding}px`;
-        mask.style.left = `${rect.left + window.scrollX - padding}px`;
-        mask.style.width = `${rect.width + padding * 2}px`;
-        mask.style.height = `${rect.height + padding * 2}px`;
-        mask.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
-        mask.style.border = '4px solid rgba(255, 0, 0, 0.5)';
-        mask.style.pointerEvents = 'none';
-        mask.style.zIndex = '9999';
-        mask.style.boxSizing = 'border-box';
-        mask.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.3)';
-        mask.style.transition = 'opacity 0.3s ease';
-        mask.style.opacity = '0';
+        // 创建圆形标记
+        const marker = document.createElement('div');
+        marker.id = '__highlight-marker';
+        marker.style.position = 'fixed';
 
-        document.body.appendChild(mask);
+        // 计算圆心位置（元素中心）
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
 
-        // 淡入出现
-        requestAnimationFrame(() => {
-            mask.style.opacity = '1';
-        });
+        // 圆点设置
+        const size = 24; // 稍微大一点
 
-        // 实现闪烁效果：渐隐、渐现，重复几次
-        let flashes = 3;
-        let visible = true;
-        let count = 0;
+        marker.style.top = `${centerY - size/2 + window.scrollY}px`;
+        marker.style.left = `${centerX - size/2 + window.scrollX}px`;
+        marker.style.width = `${size}px`;
+        marker.style.height = `${size}px`;
+        marker.style.borderRadius = '50%';
+        marker.style.backgroundColor = 'rgba(255, 50, 50, 0.9)'; // 更鲜艳的红色
+        marker.style.boxShadow = '0 0 15px 5px rgba(255, 50, 50, 0.8), 0 0 30px 10px rgba(255, 50, 50, 0.4)'; // 更强的光晕
+        marker.style.pointerEvents = 'none';
+        marker.style.zIndex = '9999';
 
-        const interval = setInterval(() => {
-            visible = !visible;
-            mask.style.opacity = visible ? '1' : '0.2';
-            count++;
+        // 添加内圈
+        const innerCircle = document.createElement('div');
+        innerCircle.style.position = 'absolute';
+        innerCircle.style.top = '15%';
+        innerCircle.style.left = '15%';
+        innerCircle.style.width = '70%';
+        innerCircle.style.height = '70%';
+        innerCircle.style.borderRadius = '50%';
+        innerCircle.style.backgroundColor = 'rgba(255, 255, 255, 0.9)'; // 白色内圈增加对比度
 
-            if (count >= flashes * 2) {
-                clearInterval(interval);
+        marker.appendChild(innerCircle);
 
-                // 最后淡出并移除遮罩
-                mask.style.opacity = '0';
-                setTimeout(() => {
-                    mask.remove();
-                }, 300);
-            }
+        // 创建动画样式
+        const styleSheet = document.createElement('style');
+        styleSheet.id = '__highlight-marker-style';
+        styleSheet.textContent = `
+        @keyframes pulse-and-flash {
+            0% { transform: scale(0.7); box-shadow: 0 0 15px 5px rgba(255, 50, 50, 0.8), 0 0 30px 10px rgba(255, 50, 50, 0.4); }
+            50% { transform: scale(1.3); box-shadow: 0 0 25px 10px rgba(255, 50, 50, 0.9), 0 0 40px 15px rgba(255, 50, 50, 0.6); }
+            100% { transform: scale(0.7); box-shadow: 0 0 15px 5px rgba(255, 50, 50, 0.8), 0 0 30px 10px rgba(255, 50, 50, 0.4); }
+        }
+
+        @keyframes inner-circle-pulse {
+            0% { transform: scale(0.8); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.7; }
+        }
+
+        @keyframes ripple {
+            0% { transform: scale(0.3); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+    `;
+
+        // 如果样式已存在则移除
+        const oldStyle = document.getElementById('__highlight-marker-style');
+        if (oldStyle) oldStyle.remove();
+
+        document.head.appendChild(styleSheet);
+        document.body.appendChild(marker);
+
+        // 应用动画
+        marker.style.animation = 'pulse-and-flash 0.5s ease-in-out infinite';
+        innerCircle.style.animation = 'inner-circle-pulse 0.5s ease-in-out infinite alternate';
+
+        // 添加波纹效果
+        const addRipple = () => {
+            const ripple = document.createElement('div');
+            ripple.style.position = 'absolute';
+            ripple.style.top = '0';
+            ripple.style.left = '0';
+            ripple.style.right = '0';
+            ripple.style.bottom = '0';
+            ripple.style.borderRadius = '50%';
+            ripple.style.border = '2px solid rgba(255, 50, 50, 0.8)';
+            ripple.style.animation = 'ripple 1s ease-out forwards';
+            marker.appendChild(ripple);
+
+            setTimeout(() => ripple.remove(), 1000);
+        };
+
+        // 添加几个波纹效果
+        let rippleCount = 0;
+        const rippleInterval = setInterval(() => {
+            addRipple();
+            rippleCount++;
+            if (rippleCount >= 3) clearInterval(rippleInterval);
         }, 300);
+
+        // 使用 Promise 来等待整个高亮过程完成
+        return new Promise(resolve => {
+            // 1秒后淡出并移除
+            setTimeout(() => {
+                clearInterval(rippleInterval);
+                marker.style.animation = 'none';
+                innerCircle.style.animation = 'none';
+                marker.style.transition = 'all 0.4s ease';
+                marker.style.opacity = '0';
+                marker.style.transform = 'scale(0.3)';
+
+                setTimeout(() => {
+                    marker.remove();
+                    styleSheet.remove();
+                    resolve(); // 动画完成后解析 Promise
+                }, 400);
+            }, 1000);
+        });
     }
 
 }

@@ -45,6 +45,7 @@ class BlockCommand extends Command {
             pos = this.calcPosition();
         }
         //await this.selectCategory()
+        await Rpa.highlightElement(domBlock)
         window.opcodeToId = {[opcode]: this.id};
         await Rpa.drag(domBlock, pos[0], pos[1]);
         window.opcodeToId = {};
@@ -73,7 +74,7 @@ export class AddBlockCommand extends BlockCommand {
 
         const rectWorkspace = this.getElementCoords(document.querySelector(".injectionDiv"));
         const rectToolBox = this.getElementCoords(document.querySelector(".blocklyFlyout"));
-        const defaultPos = [rectWorkspace[0] + rectToolBox[2] + 100, 200];
+        const defaultPos = [rectWorkspace[0] + rectToolBox[2] + 150, 200];
 
         if (scriptIds.length === 0) {
             return defaultPos

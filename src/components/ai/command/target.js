@@ -21,6 +21,7 @@ export class SelectTargetCommand extends Command {
             const labels = document.querySelectorAll('.stage-selector_label_Ao0a3');
             for (const label of labels) {
                 if (label.textContent.trim() === "背景") {
+                    await Rpa.highlightElement(label)
                     await Rpa.click(label);
                     break;
                 }
@@ -29,6 +30,7 @@ export class SelectTargetCommand extends Command {
             const sprites = document.querySelectorAll('.sprite-selector-item_sprite-name_iMqNV');
             for (const sprite of sprites) {
                 if (sprite.textContent.trim() === this.name.trim()) {
+                    await Rpa.highlightElement(sprite)
                     await Rpa.click(sprite);
                     break;
                 }
