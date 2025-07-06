@@ -311,6 +311,7 @@ export class MessagePlayer extends EventEmitter {
 
                     if (!messageData.done) {
                         this.addMessage(messageData);
+                        console.log("接收到数据，并且MESSAGE_RECEIVED");
                         this.emit(MessagePlayerEvents.MESSAGE_RECEIVED, messageData);
                         this.play();
                     }
