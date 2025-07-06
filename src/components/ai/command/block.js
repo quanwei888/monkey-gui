@@ -1,9 +1,7 @@
 import Rpa from '../lib/rpa';
 import Command from "./base";
 
-/**
- * 块命令基类
- */
+var currentCategory = null;
 class BlockCommand extends Command {
     id = null;
     dataId = null;
@@ -22,6 +20,14 @@ class BlockCommand extends Command {
         throw new Error("calcPosition method not implemented");
     }
 
+    async selectCategory() {
+        const category = this.dataId.split("_")[0];
+        if (currentCategory !== category) {
+            currentCategory = category;
+            await Rpa.selectCategory(category)
+        }
+    }
+
     /**
      * 执行块的拖拽操作
      */
@@ -38,6 +44,7 @@ class BlockCommand extends Command {
         if (await this.ensureScriptBlockVisible(pos[0], pos[1])) {
             pos = this.calcPosition();
         }
+        //await this.selectCategory()
         window.opcodeToId = {[opcode]: this.id};
         await Rpa.drag(domBlock, pos[0], pos[1]);
         window.opcodeToId = {};

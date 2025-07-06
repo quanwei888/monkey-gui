@@ -180,8 +180,8 @@ export default class Command {
         const bounds = {
             minX: rect.x,
             maxX: Infinity,
-            minY: rect.y + 100,
-            maxY: rect.y + rect.height - 200
+            minY: rect.y,
+            maxY: rect.y + rect.height - 100
         };
 
         const domBlock = this.getScriptEl(dataId);

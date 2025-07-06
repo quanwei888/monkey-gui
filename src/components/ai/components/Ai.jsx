@@ -1,7 +1,6 @@
 import React, {useEffect, useState, useRef} from 'react';
 import Lecture from "./Lecture";
-import Explore from "./Explore";
-import Coder from "./Coder";
+import Test from "./Test";
 
 const Ai = function (props) {
     const {
@@ -21,8 +20,8 @@ const Ai = function (props) {
         content = <Lecture vm={vm} pid={pid}/>;
     } else if (mode == "explore") {
         content = <Explore vm={vm} pid={pid}/>;
-    } else if (mode == "coder") {
-        content = <Coder vm={vm} pid={pid}/>;
+    } else if (mode == "test") {
+        content = <Test vm={vm} pid={pid}/>;
     } else {
         content = null;
     }

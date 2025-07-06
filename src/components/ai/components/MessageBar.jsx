@@ -1,9 +1,20 @@
-import React, {useState, useRef} from 'react';
-import {LoadingSpinner, MicIcon, MuteIcon, PauseIcon, PlayIcon, SendIcon, SpeakingIcon} from "./Icon";
+import React, {useState} from 'react';
+import {
+    HelpIcon,
+    LoadingSpinner,
+    MicIcon,
+    MuteIcon,
+    PauseIcon,
+    PlayIcon,
+    SendIcon,
+    ShareIcon,
+    SpeakingIcon
+} from "./Icon";
 import Recorder from "./Recorder";
+import Mode from "../lib/mode";
 
 // 主消息栏组件
-const MessageBar = ({onSendMessage, onPlayChange, onMuteChange, isPlaying, isMuted, isReady}) => {
+const MessageBar = ({onSendMessage, onPlayChange, onMuteChange, player, mode}) => {
     const [message, setMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
 
@@ -53,38 +64,41 @@ const MessageBar = ({onSendMessage, onPlayChange, onMuteChange, isPlaying, isMut
         await handleSendMessage(text);
     };
 
+    const handleCommentClick = async () => {
+        await handleSendMessage("@comment");
+    };
+
     return (
         <div className="w-full min-w-[500px] bg-white border-t border-gray-200 p-2 shadow-lg">
-            {/* 消息输入区域 */}
             <div className="flex items-center h-10">
                 {/* 播放/暂停按钮 */}
-                {isReady && onPlayChange &&
+                {mode == Mode.LectureMode && player &&
                     <>
                         <button
                             className={`p-2 rounded-full flex-shrink-0 mr-1 transition-colors duration-200
-                        ${isPlaying
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
+                        ${player.isPaused
+                                ? 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                                : 'bg-blue-500 text-white'}
                         w-10 h-10 flex items-center justify-center `}
                             type="button"
-                            title={isPlaying ? "暂停音频" : "播放音频"}
+                            title={player.isPaused ? "播放音频" : "暂停音频"}
                             onClick={handleTogglePlay}
                         >
-                            {isPlaying ? <SpeakingIcon/> : <PlayIcon/>}
+                            {player.isPaused ? <PlayIcon/> : <SpeakingIcon/>}
                         </button>
 
                         <button
                             className={`p-2 rounded-full flex-shrink-0 transition-colors duration-200 bg-gray-100 hover:bg-gray-200 text-gray-600
                         w-10 h-10 flex items-center justify-center `}
                             type="button"
-                            title={isMuted ? "取消静音" : "静音"}
+                            title={player.isMuted ? "取消静音" : "静音"}
                             onClick={handleToggleMute}
                         >
-                            <MuteIcon isMuted={isMuted}/>
+                            <MuteIcon isMuted={player.isMuted}/>
                         </button>
 
                         {/* 添加分割竖线 */}
-                        <div className="h-6 w-px bg-gray-300 mx-3 flex-shrink-0"></div>
+                        <div className="h-6 w-px bg-gray-300 mx-6 flex-shrink-0"></div>
                     </>
                 }
 
@@ -124,6 +138,19 @@ const MessageBar = ({onSendMessage, onPlayChange, onMuteChange, isPlaying, isMut
                 >
                     {isSending ? <LoadingSpinner/> : <SendIcon/>}
                 </button>
+
+                <div className="h-6 w-px bg-gray-300 mx-4 flex-shrink-0"></div>
+
+                {mode == Mode.TestMode &&
+                    <button
+                        className={`p-2 rounded-full flex-shrink-0 ml-2 mr-1 transition-colors duration-200 bg-blue-500 text-white
+                        w-10 h-10 flex items-center justify-center `}
+                        type="button"
+                        title={"让老师点评"}
+                        onClick={handleCommentClick}
+                    >
+                        <ShareIcon/>
+                    </button>}
             </div>
         </div>
     );

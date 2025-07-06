@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
  */
 class Rpa {
     constructor() {
-        this.user = userEvent.setup({delay: 100});
+        this.user = userEvent.setup({delay: 0});
         this.fast_user = userEvent.setup(); // 默认无延迟
 
         this._unblockFn = null;
@@ -336,8 +336,8 @@ class Rpa {
         if (!el) {
             throw new Error(`Category "${name}" not found`);
         }
-        //await this.click(el);
-        //await this.wait(500);
+        await this.click(el);
+        await this.wait(500);
     }
 
     highlightCategory(name) {

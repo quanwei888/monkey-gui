@@ -13,6 +13,7 @@ import {
 import audioManager from "./audio";
 import api from "./api";
 import audioMgr from "./audio";
+import EventEmitter from 'events';
 
 /**
  * 消息基类 - 所有消息类型的基础
@@ -170,73 +171,82 @@ export class MessageFactory {
     }
 }
 
+
+export const MessagePlayerEvents = {
+    PAUSE_CHANGED: 'pauseChanged',
+    MUTE_CHANGED: 'muteChanged',
+    MESSAGE_ADDED: 'messageAdded',
+    RESET: 'reset',
+    ALL_MESSAGES_PLAYED: 'allMessagesPlayed',
+    FIRST_MESSAGE_RECEIVED: 'firstMessageReceived',
+    MESSAGE_RECEIVED: 'messageReceived',
+    MESSAGE_GROUP_PLAYED: 'messageGroupPlayed',
+    PLAY_ERROR: 'playError',
+    LOAD_MESSAGE_ERROR: 'loadMessageError',
+    CONNECTION_OPEN: 'connectionOpen',
+    CONNECTION_ERROR: 'connectionError',
+    STREAM_END: 'streamEnd',
+    STREAM_PARSE_ERROR: 'streamParseError',
+};
+
 /**
- * 消息处理类 - 负责执行指令和处理消息流
+ * 消息播放类 - 负责执行指令和处理消息流
  */
-export class MessagePlayer {
+export class MessagePlayer extends EventEmitter {
     /**
      * 创建消息处理器实例
-     * @param {Object} vm - 虚拟机实例
+     * @param {Object} data - { vm }
      */
     constructor(data) {
+        super();
         this.vm = data.vm;
         this.isPaused = true;
         this.isMuted = false;
         this.isProcessing = false;
         this.messageGroupQueue = [];
         this.currentMessageGroup = null;
-        this.onMessagePlayedCompleted = data.onMessagePlayedCompleted;
-
     }
 
-    /**
-     * 暂停消息处理
-     */
     setIsPaused(isPaused) {
         this.isPaused = isPaused;
+        this.emit(MessagePlayerEvents.PAUSE_CHANGED, isPaused);
+        !this.isPaused && this.play();
         console.log("暂停设置", isPaused);
     }
 
-
     setIsMuted(isMuted) {
         this.isMuted = isMuted;
+        this.emit(MessagePlayerEvents.MUTE_CHANGED, isMuted);
         console.log("静音设置", isMuted);
     }
 
-
-    /**
-     * 添加消息到队列
-     * @param {Object} messageData - 要添加的消息数据
-     */
     addMessage(messageData) {
         const messageGroup = MessageFactory.createMessage(this.vm, messageData);
         this.messageGroupQueue.push(messageGroup);
+        this.emit(MessagePlayerEvents.MESSAGE_ADDED, messageData);
     }
 
-    /**
-     * 重置处理状态，停止当前音频
-     */
     reset() {
         this.isPaused = true;
         this.isMuted = false;
         this.messageGroupQueue = [];
         this.currentMessageGroup = null;
         this.isProcessing = false;
+        this.emit(MessagePlayerEvents.RESET);
     }
 
     async play() {
-        // 使用while循环替代递归
         while (true) {
-            // 如果暂停或正在处理中，直接返回
             if (this.isPaused || this.isProcessing) {
                 return;
             }
-
             this.isProcessing = true;
 
             try {
                 if (!this.currentMessageGroup) {
                     this.currentMessageGroup = this.messageGroupQueue.shift();
+
+                    // 预加载音频
                     if (this.messageGroupQueue.length >= 2) {
                         for (const message of this.messageGroupQueue[1]) {
                             const audioText = message.text;
@@ -247,15 +257,13 @@ export class MessagePlayer {
 
                 if (!this.currentMessageGroup) {
                     this.isProcessing = false;
-                    this.onMessagePlayedCompleted && this.onMessagePlayedCompleted();
+                    this.emit(MessagePlayerEvents.ALL_MESSAGES_PLAYED);
                     return;
                 }
 
-                // 如果有当前消息，处理它
                 const messagePromises = [];
                 for (const messageGroup of this.currentMessageGroup) {
                     if (messageGroup instanceof AudioMessage && this.isMuted) {
-                        // 如果消息是音频且静音，则跳过
                         messageGroup.isCompleted = true;
                         continue;
                     }
@@ -271,27 +279,29 @@ export class MessagePlayer {
                 }
 
                 if (completed) {
+                    this.emit(MessagePlayerEvents.MESSAGE_GROUP_PLAYED, this.currentMessageGroup);
                     this.currentMessageGroup = null;
                 }
 
                 this.isProcessing = false;
-
             } catch (error) {
                 console.error("消息处理失败:", error);
+                this.emit(MessagePlayerEvents.PLAY_ERROR, error);
                 this.currentMessageGroup = null;
                 this.isProcessing = false;
-                // 发生错误后继续循环处理下一个消息组
             }
         }
     }
 
-    async loadMessage(action, data, onFirstMessageReceived) {
+    async loadMessage(action, data) {
         try {
             const sessionId = await api.submit(action, data);
             const eventSource = new EventSource(`http://test.xiaomalong.org:3001/stream/${sessionId}`);
+            let hasFirstMessage = false;
 
             eventSource.onopen = () => {
                 console.log("SSE连接已建立");
+                this.emit(MessagePlayerEvents.CONNECTION_OPEN);
             };
 
             eventSource.onmessage = (event) => {
@@ -301,34 +311,33 @@ export class MessagePlayer {
 
                     if (!messageData.done) {
                         this.addMessage(messageData);
+                        this.emit(MessagePlayerEvents.MESSAGE_RECEIVED, messageData);
                         this.play();
                     }
-                    if (onFirstMessageReceived) {
+                    if (!hasFirstMessage) {
+                        hasFirstMessage = true;
                         audioMgr.getOrFetchAudio(messageData.text);
-                        onFirstMessageReceived && onFirstMessageReceived();
-                        onFirstMessageReceived = null;
+                        this.emit(MessagePlayerEvents.FIRST_MESSAGE_RECEIVED, messageData);
                     }
-
                     if (messageData.done) {
                         console.log("流处理完成，关闭连接");
-                        onFirstMessageReceived && onFirstMessageReceived();
+                        this.emit(MessagePlayerEvents.STREAM_END);
                         eventSource.close();
                     }
                 } catch (error) {
                     console.error("解析事件数据出错:", error);
-                    console.log("原始事件数据:", event.data);
-                    onFirstMessageReceived && onFirstMessageReceived();
+                    this.emit(MessagePlayerEvents.STREAM_PARSE_ERROR, error, event.data);
                 }
             };
 
             eventSource.onerror = (error) => {
                 console.error("EventSource错误:", error);
-                onFirstMessageReceived && onFirstMessageReceived();
+                this.emit(MessagePlayerEvents.CONNECTION_ERROR, error);
                 eventSource.close();
             };
         } catch (error) {
             console.error("loadMessage 错误", error);
-            onFirstMessageReceived && onFirstMessageReceived();
+            this.emit(MessagePlayerEvents.LOAD_MESSAGE_ERROR, error);
         }
     }
 }
