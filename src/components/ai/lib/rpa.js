@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
  */
 class Rpa {
     constructor() {
-        this.user = userEvent.setup({delay: 100});
+        this.user = userEvent.setup({delay: 0});
         this.fast_user = userEvent.setup(); // 默认无延迟
 
         this._unblockFn = null;
@@ -254,7 +254,7 @@ class Rpa {
             const rectWorkspace = this.getElementCoords(document.querySelector(".injectionDiv"));
             const rectToolBox = this.getElementCoords(document.querySelector(".blocklyFlyout"));
             // 第一步：先拖动一点
-            await this.smoothDrag(element, startX, startY, rectWorkspace[0] + rectToolBox[2] + 50, endY, 20);
+            await this.smoothDrag(element, startX, startY, rectWorkspace[0] + rectToolBox[2] + 50, endY, 10);
             await this.smoothDrag(element, rectWorkspace[0] + rectToolBox[2] + 50, endY, endX, endY, 5);
 
             // 鼠标释放
@@ -345,6 +345,7 @@ class Rpa {
     }
 
     async highlightElement(element) {
+        return ;
         if (!(element instanceof Element)) return;
 
         // 移除旧的高亮标记（如果存在）

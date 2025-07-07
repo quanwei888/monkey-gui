@@ -180,7 +180,7 @@ export default class Command {
         const bounds = {
             minX: rect.x,
             maxX: Infinity,
-            minY: rect.y,
+            minY: rect.y ,
             maxY: rect.y + rect.height - 100
         };
 

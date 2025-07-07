@@ -131,9 +131,9 @@ export class BlockInputCommand extends InputCommand {
             }
             const domParamBlock = this.getScriptEl(this.paramValue.dataId);
             const opcode = domParamBlock.getAttribute("data-id");
-            window.opcodeToId = {[opcode]: this.paramValue.id};//参数 block 的 id
 
             let pos = this.calcPosition();
+            await this.ensureToolboxBlockVisible(opcode)
             if (await this.ensureScriptBlockVisible(pos[0], pos[1])) {
                 pos = this.calcPosition();
             }
@@ -200,6 +200,7 @@ export class VariableInputCommand extends BlockInputCommand {
             }
             const domParamBlock = this.getScriptEl(dataId);
             let pos = this.calcPosition();
+            await this.ensureToolboxBlockVisible(dataId)
             if (await this.ensureScriptBlockVisible(pos[0], pos[1])) {
                 pos = this.calcPosition();
             }
