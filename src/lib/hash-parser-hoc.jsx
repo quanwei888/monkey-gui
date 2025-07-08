@@ -38,8 +38,13 @@ const HashParserHOC = function (WrappedComponent) {
         }
         handleHashChange () {
             const hashMatch = window.location.hash.match(/#(.+)/);
-            const hashProjectId = hashMatch === null ? defaultProjectId : hashMatch[1];
-            this.props.setProjectId(hashProjectId.toString());
+
+            if (hashMatch !== null) {
+                const hashContent = hashMatch[1];
+                const parts = hashContent.split('@');
+                const hashProjectId = parts[0];
+                this.props.setProjectId(hashProjectId.toString());
+            }
         }
         render () {
             const {

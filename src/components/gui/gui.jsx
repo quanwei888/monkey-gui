@@ -41,7 +41,6 @@ import codeIcon from './icon--code.svg';
 import costumesIcon from './icon--costumes.svg';
 import soundsIcon from './icon--sounds.svg';
 import DebugModal from '../debug-modal/debug-modal.jsx';
-import Ai from "../ai/components/Ai";
 
 const messages = defineMessages({
     addExtension: {
@@ -133,6 +132,7 @@ const GUIComponent = props => {
     if (children) {
         return <Box {...componentProps}>{children}</Box>;
     }
+    window.vm = vm;
 
     const tabClassNames = {
         tabs: styles.tabs,
@@ -147,12 +147,18 @@ const GUIComponent = props => {
         isRendererSupported = Renderer.isSupported();
     }
 
+    const playerData = {isFullScreen,isPlayerOnly};
+    if (window.location.hash.includes('player')) {
+        playerData.isPlayerOnly = true;
+    }
+
+
     return (<MediaQuery minWidth={layout.fullSizeMinWidth}>{isFullSize => {
         const stageSize = resolveStageSize(stageSizeMode, isFullSize);
 
-        return isPlayerOnly ? (
+        return playerData.isPlayerOnly ? (
             <StageWrapper
-                isFullScreen={isFullScreen}
+                isFullScreen={true}
                 isRendererSupported={isRendererSupported}
                 isRtl={isRtl}
                 loading={loading}
@@ -160,7 +166,7 @@ const GUIComponent = props => {
                 vm={vm}
             >
                 {alertsVisible ? (
-                    <Alerts className={styles.alertsContainer} />
+                    <Alerts className={styles.alertsContainer}/>
                 ) : null}
             </StageWrapper>
         ) : (
@@ -182,22 +188,22 @@ const GUIComponent = props => {
                     />
                 ) : null}
                 {loading ? (
-                    <Loader />
+                    <Loader/>
                 ) : null}
                 {isCreating ? (
-                    <Loader messageId="gui.loader.creating" />
+                    <Loader messageId="gui.loader.creating"/>
                 ) : null}
                 {isRendererSupported ? null : (
-                    <WebGlModal isRtl={isRtl} />
+                    <WebGlModal isRtl={isRtl}/>
                 )}
                 {tipsLibraryVisible ? (
-                    <TipsLibrary />
+                    <TipsLibrary/>
                 ) : null}
                 {cardsVisible ? (
-                    <Cards />
+                    <Cards/>
                 ) : null}
                 {alertsVisible ? (
-                    <Alerts className={styles.alertsContainer} />
+                    <Alerts className={styles.alertsContainer}/>
                 ) : null}
                 {connectionModalVisible ? (
                     <ConnectionModal
@@ -321,7 +327,6 @@ const GUIComponent = props => {
                                             theme={theme}
                                             vm={vm}
                                         />
-                                        <Ai vm={vm}/>
                                     </Box>
                                     <Box className={styles.extensionButtonContainer}>
                                         <button
@@ -337,15 +342,15 @@ const GUIComponent = props => {
                                         </button>
                                     </Box>
                                     <Box className={styles.watermark}>
-                                        <Watermark />
+                                        <Watermark/>
                                     </Box>
 
                                 </TabPanel>
                                 <TabPanel className={tabClassNames.tabPanel}>
-                                    {costumesTabVisible ? <CostumeTab vm={vm} /> : null}
+                                    {costumesTabVisible ? <CostumeTab vm={vm}/> : null}
                                 </TabPanel>
                                 <TabPanel className={tabClassNames.tabPanel}>
-                                    {soundsTabVisible ? <SoundTab vm={vm} /> : null}
+                                    {soundsTabVisible ? <SoundTab vm={vm}/> : null}
                                 </TabPanel>
                             </Tabs>
                         </Box>
@@ -367,7 +372,7 @@ const GUIComponent = props => {
                         </Box>
                     </Box>
                 </Box>
-                <DragLayer />
+                <DragLayer/>
             </Box>
         );
     }}</MediaQuery>);
