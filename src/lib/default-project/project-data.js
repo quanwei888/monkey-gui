@@ -70,7 +70,41 @@ const projectData = translateFunction => {
                 variables: {},
                 lists: {},
                 broadcasts: {},
-                blocks: {},
+                // 添加使用画笔扩展的积木块
+                blocks: {
+                    // 绿旗点击事件
+                    'jEk@4|i[#Fk?(8x)AV.-1': {
+                        opcode: 'event_whenflagclicked',
+                        next: 'jEk@4|i[#Fk?(8x)AV.-2',
+                        parent: null,
+                        inputs: {},
+                        fields: {},
+                        shadow: false,
+                        topLevel: true,
+                        x: 50,
+                        y: 50
+                    },
+                    // 清除画笔积木
+                    'jEk@4|i[#Fk?(8x)AV.-2': {
+                        opcode: 'pen_clear',
+                        next: 'jEk@4|i[#Fk?(8x)AV.-3',
+                        parent: 'jEk@4|i[#Fk?(8x)AV.-1',
+                        inputs: {},
+                        fields: {},
+                        shadow: false,
+                        topLevel: false
+                    },
+                    // 落笔积木
+                    'jEk@4|i[#Fk?(8x)AV.-3': {
+                        opcode: 'pen_penDown',
+                        next: null,
+                        parent: 'jEk@4|i[#Fk?(8x)AV.-2',
+                        inputs: {},
+                        fields: {},
+                        shadow: false,
+                        topLevel: false
+                    }
+                },
                 currentCostume: 0,
                 costumes: [
                     {
@@ -116,10 +150,10 @@ const projectData = translateFunction => {
         meta: {
             semver: '3.0.0',
             vm: '0.1.0',
-            agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36' // eslint-disable-line max-len
+            agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36', // eslint-disable-line max-len
+            extensions: ['pen'] // 添加画笔扩展
         }
     });
 };
-
 
 export default projectData;

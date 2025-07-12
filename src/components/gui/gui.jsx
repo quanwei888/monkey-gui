@@ -133,6 +133,7 @@ const GUIComponent = props => {
         return <Box {...componentProps}>{children}</Box>;
     }
     window.vm = vm;
+    vm.extensionManager.loadExtensionIdSync("pen");
 
     const tabClassNames = {
         tabs: styles.tabs,
