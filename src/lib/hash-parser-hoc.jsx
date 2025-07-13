@@ -37,14 +37,7 @@ const HashParserHOC = function (WrappedComponent) {
             window.removeEventListener('hashchange', this.handleHashChange);
         }
         handleHashChange () {
-            const hashMatch = window.location.hash.match(/#(.+)/);
-
-            if (hashMatch !== null) {
-                const hashContent = hashMatch[1];
-                const parts = hashContent.split('@');
-                const hashProjectId = parts[0];
-                this.props.setProjectId(hashProjectId.toString());
-            }
+            this.props.setProjectId(this.props.projectId);
         }
         render () {
             const {
@@ -65,7 +58,8 @@ const HashParserHOC = function (WrappedComponent) {
     HashParserComponent.propTypes = {
         isFetchingWithoutId: PropTypes.bool,
         reduxProjectId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-        setProjectId: PropTypes.func
+        setProjectId: PropTypes.func,
+        projectId:PropTypes.string
     };
     const mapStateToProps = state => {
         const loadingState = state.scratchGui.projectState.loadingState;

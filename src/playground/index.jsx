@@ -12,16 +12,25 @@ import BrowserModalComponent from '../components/browser-modal/browser-modal.jsx
 import supportedBrowser from '../lib/supported-browser';
 
 import styles from './index.css';
+import queryString from "query-string";
 
 const appTarget = document.createElement('div');
 appTarget.className = styles.app;
 document.body.appendChild(appTarget);
 
 if (supportedBrowser()) {
-    // require needed here to avoid importing unsupported browser-crashing code
-    // at the top level
-    require('./render-gui.jsx').default(appTarget);
+    // 检查URL参数或路径
+    const { player, projectId } = queryString.parse(window.location.search);
 
+    if (player == "1") {
+        // 播放器模式
+        console.log('Loading player mode...');
+        require('./player.jsx').default(appTarget,projectId);
+    } else {
+        // 编辑器模式（默认）
+        console.log('Loading editor mode...');
+        require('./render-gui.jsx').default(appTarget,projectId);
+    }
 } else {
     BrowserModalComponent.setAppElement(appTarget);
     const WrappedBrowserModalComponent = AppStateHOC(BrowserModalComponent, true /* localesOnly */);

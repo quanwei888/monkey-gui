@@ -28,7 +28,7 @@ const handleTelemetryModalOptOut = () => {
  * that instantiates the VM causes unsupported browsers to crash
  * {object} appTarget - the DOM element to render to
  */
-export default appTarget => {
+export default (appTarget,projectId) => {
     GUI.setAppElement(appTarget);
 
     // note that redux's 'compose' function is just being used as a general utility to make
@@ -65,6 +65,7 @@ export default appTarget => {
         // important: this is checking whether `simulateScratchDesktop` is truthy, not just defined!
         simulateScratchDesktop ?
             <WrappedGui
+                projectId={projectId}
                 canEditTitle
                 isScratchDesktop
                 showTelemetryModal
@@ -74,6 +75,7 @@ export default appTarget => {
                 onTelemetryModalOptOut={handleTelemetryModalOptOut}
             /> :
             <WrappedGui
+                projectId={projectId}
                 canEditTitle
                 backpackVisible
                 showComingSoon

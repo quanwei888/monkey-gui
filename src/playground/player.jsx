@@ -12,20 +12,14 @@ import AppStateHOC from '../lib/app-state-hoc.jsx';
 
 import {setPlayer} from '../reducers/mode';
 
-if (process.env.NODE_ENV === 'production' && typeof window === 'object') {
-    // Warn before navigating away
-    window.onbeforeunload = () => true;
-}
-
 import styles from './player.css';
 
 const Player = ({isPlayerOnly, onSeeInside, projectId}) => (
     <Box className={classNames(isPlayerOnly ? styles.stageOnly : styles.editor)}>
-        {isPlayerOnly && <button onClick={onSeeInside}>{'See inside'}</button>}
         <GUI
             canEditTitle
             enableCommunity
-            isPlayerOnly={isPlayerOnly}
+            isPlayerOnly={true}
             projectId={projectId}
         />
     </Box>
@@ -37,28 +31,47 @@ Player.propTypes = {
     projectId: PropTypes.string
 };
 
-const mapStateToProps = state => ({
-    isPlayerOnly: state.scratchGui.mode.isPlayerOnly
-});
+/*
+ * Render the player mode. This is a separate function because importing anything
+ * that instantiates the VM causes unsupported browsers to crash
+ * @param {object} appTarget - the DOM element to render to
+ * @param {string} projectId - optional project ID to load
+ */
+export default (appTarget, projectId) => {
+    if (process.env.NODE_ENV === 'production' && typeof window === 'object') {
+        // Warn before navigating away
+        window.onbeforeunload = () => true;
+    }
 
-const mapDispatchToProps = dispatch => ({
-    onSeeInside: () => dispatch(setPlayer(false))
-});
+    // Map state to props function that respects passed in projectId
+    const mapStateToProps = state => ({
+        isPlayerOnly: state.scratchGui.mode.isPlayerOnly,
+        // Use passed projectId if available, otherwise use default or from state
+        projectId: projectId
+    });
 
-const ConnectedPlayer = connect(
-    mapStateToProps,
-    mapDispatchToProps
-)(Player);
+    const mapDispatchToProps = dispatch => ({
+        onSeeInside: () => dispatch(setPlayer(false))
+    });
 
-// note that redux's 'compose' function is just being used as a general utility to make
-// the hierarchy of HOC constructor calls clearer here; it has nothing to do with redux's
-// ability to compose reducers.
-const WrappedPlayer = compose(
-    AppStateHOC,
-    HashParserHOC
-)(ConnectedPlayer);
+    const ConnectedPlayer = connect(
+        mapStateToProps,
+        mapDispatchToProps
+    )(Player);
 
-const appTarget = document.createElement('div');
-document.body.appendChild(appTarget);
+    // Note that redux's 'compose' function is just being used as a general utility to make
+    // the hierarchy of HOC constructor calls clearer here; it has nothing to do with redux's
+    // ability to compose reducers.
+    const WrappedPlayer = compose(
+        AppStateHOC,
+        HashParserHOC
+    )(ConnectedPlayer);
 
-ReactDOM.render(<WrappedPlayer isPlayerOnly />, appTarget);
+    ReactDOM.render(
+        <WrappedPlayer
+            isPlayerOnly
+            projectId={projectId}  // Pass projectId to the wrapped component
+        />,
+        appTarget
+    );
+};

@@ -132,8 +132,6 @@ const GUIComponent = props => {
     if (children) {
         return <Box {...componentProps}>{children}</Box>;
     }
-    window.vm = vm;
-    vm.extensionManager.loadExtensionIdSync("pen");
 
     const tabClassNames = {
         tabs: styles.tabs,
@@ -148,18 +146,12 @@ const GUIComponent = props => {
         isRendererSupported = Renderer.isSupported();
     }
 
-    const playerData = {isFullScreen,isPlayerOnly};
-    if (window.location.hash.includes('player')) {
-        playerData.isPlayerOnly = true;
-    }
-
-
     return (<MediaQuery minWidth={layout.fullSizeMinWidth}>{isFullSize => {
         const stageSize = resolveStageSize(stageSizeMode, isFullSize);
 
-        return playerData.isPlayerOnly ? (
+        return isPlayerOnly ? (
             <StageWrapper
-                isFullScreen={true}
+                isFullScreen={isFullScreen}
                 isRendererSupported={isRendererSupported}
                 isRtl={isRtl}
                 loading={loading}
@@ -167,7 +159,7 @@ const GUIComponent = props => {
                 vm={vm}
             >
                 {alertsVisible ? (
-                    <Alerts className={styles.alertsContainer}/>
+                    <Alerts className={styles.alertsContainer} />
                 ) : null}
             </StageWrapper>
         ) : (
@@ -189,22 +181,22 @@ const GUIComponent = props => {
                     />
                 ) : null}
                 {loading ? (
-                    <Loader/>
+                    <Loader />
                 ) : null}
                 {isCreating ? (
-                    <Loader messageId="gui.loader.creating"/>
+                    <Loader messageId="gui.loader.creating" />
                 ) : null}
                 {isRendererSupported ? null : (
-                    <WebGlModal isRtl={isRtl}/>
+                    <WebGlModal isRtl={isRtl} />
                 )}
                 {tipsLibraryVisible ? (
-                    <TipsLibrary/>
+                    <TipsLibrary />
                 ) : null}
                 {cardsVisible ? (
-                    <Cards/>
+                    <Cards />
                 ) : null}
                 {alertsVisible ? (
-                    <Alerts className={styles.alertsContainer}/>
+                    <Alerts className={styles.alertsContainer} />
                 ) : null}
                 {connectionModalVisible ? (
                     <ConnectionModal
@@ -221,6 +213,12 @@ const GUIComponent = props => {
                     isOpen={debugModalVisible}
                     onClose={onRequestCloseDebugModal}
                 />}
+                {backdropLibraryVisible ? (
+                    <BackdropLibrary
+                        vm={vm}
+                        onRequestClose={onRequestCloseBackdropLibrary}
+                    />
+                ) : null}
                 <MenuBar
                     accountNavOpen={accountNavOpen}
                     authorId={authorId}
@@ -343,17 +341,19 @@ const GUIComponent = props => {
                                         </button>
                                     </Box>
                                     <Box className={styles.watermark}>
-                                        <Watermark/>
+                                        <Watermark />
                                     </Box>
-
                                 </TabPanel>
                                 <TabPanel className={tabClassNames.tabPanel}>
-                                    {costumesTabVisible ? <CostumeTab vm={vm}/> : null}
+                                    {costumesTabVisible ? <CostumeTab vm={vm} /> : null}
                                 </TabPanel>
                                 <TabPanel className={tabClassNames.tabPanel}>
-                                    {soundsTabVisible ? <SoundTab vm={vm}/> : null}
+                                    {soundsTabVisible ? <SoundTab vm={vm} /> : null}
                                 </TabPanel>
                             </Tabs>
+                            {backpackVisible ? (
+                                <Backpack host={backpackHost} />
+                            ) : null}
                         </Box>
 
                         <Box className={classNames(styles.stageAndTargetWrapper, styles[stageSize])}>
@@ -373,7 +373,7 @@ const GUIComponent = props => {
                         </Box>
                     </Box>
                 </Box>
-                <DragLayer/>
+                <DragLayer />
             </Box>
         );
     }}</MediaQuery>);
