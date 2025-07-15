@@ -37,7 +37,9 @@ const HashParserHOC = function (WrappedComponent) {
             window.removeEventListener('hashchange', this.handleHashChange);
         }
         handleHashChange () {
-            this.props.setProjectId(this.props.projectId);
+            if (this.props.projectId) {
+                this.props.setProjectId(this.props.projectId);
+            }
         }
         render () {
             const {

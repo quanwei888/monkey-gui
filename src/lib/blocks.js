@@ -6,6 +6,9 @@
  */
 export default function (vm, useCatBlocks) {
     const ScratchBlocks = useCatBlocks ? require('cat-blocks') : require('scratch-blocks');
+    //暴露vm和ScratchBlocks
+    window.vm = vm;
+    window.ScratchBlocks = ScratchBlocks;
     const jsonForMenuBlock = function (name, menuOptionsFn, colors, start) {
         return {
             message0: '%1',
